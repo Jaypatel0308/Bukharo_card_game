@@ -3,6 +3,7 @@ import type { Meld, NaturalRank, TeamId } from '@bukharo/game-engine';
 import { PlayingCard } from './PlayingCard';
 import { initialsOf } from './TopBar';
 import { SUIT_SYMBOL } from '../ui/cards';
+import { fanOverlapFor } from '../ui/meldFan';
 
 interface Props {
   melds: Meld[];
@@ -79,7 +80,12 @@ export function Melds({
                 aria-pressed={selectable ? selected : undefined}
                 aria-label={selectable ? `Add to this ${summary.toLowerCase()}` : undefined}
               >
-                <div className="meld__fan">
+                <div
+                  className="meld__fan"
+                  // Long melds slide further over each other; the floor in
+                  // meldFan keeps every corner index readable.
+                  style={{ '--fan-overlap': fanOverlapFor(meld.cards.length) } as React.CSSProperties}
+                >
                   {meld.cards.map((meldCard) => (
                     <PlayingCard
                       key={meldCard.card.id}

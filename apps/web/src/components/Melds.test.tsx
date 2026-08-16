@@ -4,6 +4,7 @@ import { createDeck } from '@bukharo/game-engine';
 import type { Card, Meld, MeldCard, NaturalRank, Suit, TeamId } from '@bukharo/game-engine';
 
 import { Melds } from './Melds';
+import { fanOverlapFor } from '../ui/meldFan';
 
 afterEach(cleanup);
 
@@ -73,6 +74,22 @@ describe('Melds', () => {
     const { container } = render(<Melds {...BASE} melds={[RUN, second]} />);
     expect(container.querySelectorAll('.meld')).toHaveLength(2);
     expect(container.querySelectorAll('.meld__fan')).toHaveLength(2);
+  });
+
+  it('compresses a long fan more than a short one', () => {
+    const short = meldOf([card('5', 'spades'), card('6', 'spades'), card('7', 'spades')]);
+    const long = meldOf([
+      card('4', 'hearts'), card('5', 'hearts'), card('6', 'hearts'), card('7', 'hearts'),
+      card('8', 'hearts'), card('9', 'hearts'), card('10', 'hearts'), card('J', 'hearts'),
+      card('Q', 'hearts'), card('K', 'hearts'),
+    ]);
+    const { container } = render(<Melds {...BASE} melds={[short, long]} />);
+
+    const fans = [...container.querySelectorAll('.meld__fan')] as HTMLElement[];
+    const overlaps = fans.map((el) => Number(el.style.getPropertyValue('--fan-overlap')));
+    expect(overlaps[0]).toBe(fanOverlapFor(3));
+    expect(overlaps[1]).toBe(fanOverlapFor(10));
+    expect(overlaps[1]).toBeGreaterThan(overlaps[0]!);
   });
 
   it('badges a clean Bucharo with its bonus', () => {

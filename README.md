@@ -16,7 +16,7 @@ Open site → Create room → Share code → Friends join → Sit in teams → S
 ```bash
 npm install
 npm run build
-npm test          # 75 engine tests + 11 websocket tests
+npm test          # 142 tests: engine, server and web client
 npm start         # http://localhost:8787
 ```
 
@@ -132,7 +132,8 @@ behaviour.
 
 ```bash
 npm run test:engine   # 75 deterministic rule tests, no I/O
-npm run test:server   # 11 tests over real websockets against a real server
+npm run test:server   # 27 tests against a real server process
+npm run test:web      # 40 client tests (Vitest, jsdom)
 ```
 
 Every pull request runs both suites and a full build in GitHub Actions
@@ -152,7 +153,18 @@ leaked into a player's view.
 The server suite starts an actual server process and drives real WebSocket
 clients through: room creation, the ready gate, private deals, duplicate action
 ids, out-of-turn moves, refresh-and-reconnect, session-token forgery, host
-migration, and a complete round played to scoring and on into round two.
+migration, team renaming, and a complete round played to scoring and on into
+round two. It also kills the server mid-match and restarts it, to prove hands
+and turn state come back off disk, and it pins down exactly which rooms the
+expiry sweep may delete — that being the only code here that throws a game
+away.
+
+The client suite covers the parts of the interface that hold state: hand
+ordering (a drawn card lands in its place, a hand the player arranged stays
+arranged), the just-picked-up highlight, the card comparators, and the action
+bar — including a regression test that its buttons keep the same identity in
+every phase, since a button that changes meaning under a waiting player's
+finger once turned a tap on "Open with 4+" into a card draw.
 
 Not covered: browser-level end-to-end tests. The UI has been built and typechecks
 against the shared protocol, and the whole client/server contract is exercised

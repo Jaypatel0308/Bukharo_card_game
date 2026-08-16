@@ -68,6 +68,13 @@ function nextSeq(draft: GameState): number {
   return draft.seqCounter;
 }
 
+/**
+ * The log is kept to the recent past. It is persisted with the room and
+ * rewritten on every action, so an unbounded one makes every move a little
+ * more expensive than the last. Clients only ever render the tail anyway.
+ */
+const MAX_LOG_ENTRIES = 300;
+
 function log(
   draft: GameState,
   playerId: string | null,
@@ -85,6 +92,9 @@ function log(
     ...(meta ? { meta } : {}),
   };
   draft.log.push(entry);
+  if (draft.log.length > MAX_LOG_ENTRIES) {
+    draft.log.splice(0, draft.log.length - MAX_LOG_ENTRIES);
+  }
 }
 
 export function playerById(state: GameState, playerId: string): GamePlayer | undefined {
@@ -469,6 +479,32 @@ export function endRound(
   if (winner) {
     log(draft, null, 'MATCH_ENDED', `${teamLabel(draft, winner)} wins the match.`, { winner });
   }
+  return draft;
+}
+
+/**
+ * Passes the turn on without playing it.
+ *
+ * This is an administrative action, not a move: it is how a table gets past a
+ * player who has gone and is not coming back. Nothing is drawn and nothing is
+ * discarded, so no card changes hands. A player skipped after drawing keeps
+ * the card they drew — an imperfect compromise, but a smaller one than a
+ * server inventing a discard from a hand it is not entitled to choose from.
+ */
+export function forceSkipTurn(state: GameState, reason: string): GameState {
+  if (state.status !== 'PLAYING') return state;
+  const draft = draftOf(state);
+  const player = playerById(draft, draft.currentPlayerId);
+  if (!player) return state;
+
+  log(
+    draft,
+    player.id,
+    'TURN_SKIPPED',
+    `${player.displayName}'s turn was skipped (${reason}).`,
+  );
+  advanceTurn(draft);
+  draft.stateVersion += 1;
   return draft;
 }
 

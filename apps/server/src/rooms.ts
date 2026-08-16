@@ -3,6 +3,7 @@ import { randomInt, randomFillSync } from 'node:crypto';
 import {
   DEFAULT_RULES,
   DEFAULT_TEAM_NAMES,
+  forceSkipTurn,
   SEAT_ORDER,
   SEAT_TEAMS,
   applyAction,
@@ -91,8 +92,11 @@ export class RoomManager {
   private async restore(): Promise<void> {
     const rooms = await this.store.loadAll();
     for (const room of rooms) {
-      // Nobody is connected to a freshly started process.
+      // Nobody is connected to a freshly started process, and nobody is being
+      // waited on: that countdown belonged to the process that died.
       for (const player of room.players) player.connected = false;
+      room.waitingForPlayerId = null;
+      room.waitingSince = null;
       this.rooms.set(room.id, room);
       this.roomIdByCode.set(room.code, room.id);
       for (const player of room.players) {
@@ -230,6 +234,7 @@ export class RoomManager {
   }
 
   async chooseSeat(roomId: string, playerId: string, seat: Seat): Promise<OpResult<Room>> {
+    if (!SEAT_ORDER.includes(seat)) return fail('INVALID_MESSAGE', 'That is not a seat at this table.');
     return this.mutate(roomId, playerId, (room, player) => {
       if (room.status !== 'LOBBY') return fail('ROOM_IN_PROGRESS', 'Seats are locked once the match starts.');
       const occupant = room.players.find((p) => p.seat === seat && p.id !== player.id);
@@ -245,6 +250,7 @@ export class RoomManager {
     targetPlayerId: string,
     seat: Seat,
   ): Promise<OpResult<Room>> {
+    if (!SEAT_ORDER.includes(seat)) return fail('INVALID_MESSAGE', 'That is not a seat at this table.');
     return this.mutate(roomId, hostId, (room, host) => {
       if (!host.isHost) return fail('NOT_HOST', 'Only the host can move players.');
       if (room.status !== 'LOBBY') return fail('ROOM_IN_PROGRESS', 'Seats are locked once the match starts.');
@@ -372,6 +378,39 @@ export class RoomManager {
     });
   }
 
+  /**
+   * §54 — moves the table past a player who has gone. Only the host, only when
+   * that player is genuinely disconnected, and only after the grace period, so
+   * this cannot be used to rush somebody with a flaky connection.
+   */
+  async skipAbsentPlayer(roomId: string, hostId: string): Promise<OpResult<Room>> {
+    return this.mutate(roomId, hostId, (room, host) => {
+      if (!host.isHost) return fail('NOT_HOST', 'Only the host can skip a player.');
+      if (room.status !== 'PLAYING' || !room.game) {
+        return fail('WRONG_PHASE', 'There is no turn to skip right now.');
+      }
+      const current = room.players.find((p) => p.id === room.game!.currentPlayerId);
+      if (!current) return fail('NOT_IN_ROOM', 'That player is no longer in the room.');
+      if (current.connected) {
+        return fail('WRONG_PHASE', `${current.displayName} is still connected — it is their turn to play.`);
+      }
+      const waitingFor = Date.now() - (room.waitingSince ?? Date.now());
+      if (waitingFor < config.disconnectGraceMs) {
+        const seconds = Math.ceil((config.disconnectGraceMs - waitingFor) / 1000);
+        return fail(
+          'WRONG_PHASE',
+          `Give ${current.displayName} a moment to reconnect — you can skip them in ${seconds}s.`,
+        );
+      }
+
+      room.game = forceSkipTurn(room.game, 'disconnected');
+      stampLog(room.game);
+      room.waitingForPlayerId = null;
+      room.waitingSince = null;
+      return { ok: true as const, value: room };
+    });
+  }
+
   async endMatch(roomId: string, hostId: string): Promise<OpResult<Room>> {
     return this.mutate(roomId, hostId, (room, host) => {
       if (!host.isHost) return fail('NOT_HOST', 'Only the host can end the match.');
@@ -431,6 +470,7 @@ export class RoomManager {
         room.waitingForPlayerId = null;
         room.waitingSince = null;
       }
+      ensureReachableHost(room);
       return { ok: true as const, value: room };
     });
     return result.ok ? result.value : undefined;
@@ -446,16 +486,10 @@ export class RoomManager {
         room.waitingForPlayerId = playerId;
         room.waitingSince = Date.now();
       }
-      // §55 — host duties move to the longest-standing connected member.
-      if (player.isHost) {
-        const heir = room.players
-          .filter((p) => p.connected && p.id !== playerId)
-          .sort((a, b) => a.joinedAt - b.joinedAt)[0];
-        if (heir) {
-          player.isHost = false;
-          heir.isHost = true;
-        }
-      }
+      // §55 — host duties move to the longest-standing connected member. If
+      // nobody is left to take them, they stay put and are reassigned by
+      // ensureReachableHost as soon as anyone comes back.
+      ensureReachableHost(room);
       return { ok: true as const, value: room };
     });
     return result.ok ? result.value : undefined;
@@ -515,9 +549,12 @@ export class RoomManager {
     playerId: string,
     fn: (room: Room, player: RoomPlayer) => OpResult<T>,
   ): Promise<OpResult<T>> {
-    const room = this.rooms.get(roomId);
-    if (!room) return fail('ROOM_NOT_FOUND', 'That room no longer exists.');
+    if (!this.rooms.has(roomId)) return fail('ROOM_NOT_FOUND', 'That room no longer exists.');
     return this.lockFor(roomId).run(async () => {
+      // Re-read inside the lock: the sweep may have taken the room while this
+      // action was queued behind another.
+      const room = this.rooms.get(roomId);
+      if (!room) return fail('ROOM_NOT_FOUND', 'That room no longer exists.');
       const player = room.players.find((p) => p.id === playerId);
       if (!player) return fail('NOT_IN_ROOM', 'You are not seated in this room.');
       const result = fn(room, player);
@@ -530,6 +567,22 @@ export class RoomManager {
 /* ------------------------------------------------------------------ */
 /* Helpers                                                             */
 /* ------------------------------------------------------------------ */
+
+/**
+ * Guarantees that if anybody is in the room, one of them can act as host.
+ *
+ * Without this a room is bricked when the host is the last to leave: the flag
+ * stays with the departed player, and the people who come back can neither
+ * deal the next round nor end the match.
+ */
+function ensureReachableHost(room: Room): void {
+  const connected = room.players.filter((p) => p.connected);
+  if (connected.length === 0) return;
+  if (connected.some((p) => p.isHost)) return;
+
+  const heir = [...connected].sort((a, b) => a.joinedAt - b.joinedAt)[0]!;
+  for (const player of room.players) player.isHost = player.id === heir.id;
+}
 
 function cleanName(name: string): string {
   return name.replace(/\s+/g, ' ').trim().slice(0, 20);
@@ -630,6 +683,8 @@ export function roomView(room: Room, viewerId: string | null): RoomView {
     rules: room.rules,
     youId: viewerId,
     waitingForPlayerId: room.waitingForPlayerId,
+    waitingSince: room.waitingSince,
+    disconnectGraceMs: config.disconnectGraceMs,
     createdAt: room.createdAt,
   };
 }

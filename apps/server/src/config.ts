@@ -36,6 +36,8 @@ export const config = {
   actionIdTtlMs: num('ACTION_ID_TTL_MS', 5 * 60_000),
   /** Crude per-connection flood protection. */
   maxMessagesPerSecond: num('MAX_MESSAGES_PER_SECOND', 25),
+  /** Sockets one address may hold at once; four players sharing a line need a few each. */
+  maxConnectionsPerAddress: num('MAX_CONNECTIONS_PER_ADDRESS', 24),
   maxMessageBytes: num('MAX_MESSAGE_BYTES', 64 * 1024),
 };
 

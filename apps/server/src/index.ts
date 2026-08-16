@@ -8,9 +8,12 @@ import type { ClientMessage, ServerError, ServerMessage } from '@bukharo/shared'
 
 import { config } from './config.js';
 import { RoomManager, roomView, type OpResult } from './rooms.js';
+import { asSeat, asTeamId, asWildAssignments } from './validate.js';
 
 interface Connection {
   ws: WebSocket;
+  /** Remote address, for the per-address connection cap. */
+  address: string;
   roomId: string | null;
   playerId: string | null;
   /** Token bucket for flood protection. */
@@ -124,7 +127,31 @@ function broadcastEvents(
   }
 }
 
-function attach(connection: Connection, roomId: string, playerId: string, token?: string): void {
+/**
+ * Moves a socket to a room, letting go of whatever it held before.
+ *
+ * Without the detach, a client that creates or joins a second room leaves its
+ * first one holding a player marked connected forever — which also stops that
+ * room ever being collected, since the sweep only takes rooms everyone has
+ * left.
+ */
+async function attach(
+  connection: Connection,
+  roomId: string,
+  playerId: string,
+  token?: string,
+): Promise<void> {
+  const previous = { roomId: connection.roomId, playerId: connection.playerId };
+  if (previous.roomId && previous.playerId && previous.roomId !== roomId) {
+    connection.roomId = null;
+    connection.playerId = null;
+    const stillThere = connectionsInRoom(previous.roomId).some((c) => c.playerId === previous.playerId);
+    if (!stillThere) {
+      await manager.markDisconnected(previous.roomId, previous.playerId);
+      broadcastRoom(previous.roomId);
+    }
+  }
+
   connection.roomId = roomId;
   connection.playerId = playerId;
   const room = manager.getRoom(roomId);
@@ -177,7 +204,7 @@ async function handleMessage(connection: Connection, message: ClientMessage): Pr
       const result = await manager.createRoom(message.displayName, message.targetScore);
       const value = handleResult(ws, result, message.actionId);
       if (!value) return;
-      attach(connection, value.room.id, value.playerId, value.sessionToken);
+      await attach(connection, value.room.id, value.playerId, value.sessionToken);
       broadcastRoom(value.room.id);
       return;
     }
@@ -186,7 +213,7 @@ async function handleMessage(connection: Connection, message: ClientMessage): Pr
       const result = await manager.joinRoom(message.roomCode, message.displayName);
       const value = handleResult(ws, result, message.actionId);
       if (!value) return;
-      attach(connection, value.room.id, value.playerId, value.sessionToken);
+      await attach(connection, value.room.id, value.playerId, value.sessionToken);
       broadcastRoom(value.room.id);
       return;
     }
@@ -202,7 +229,7 @@ async function handleMessage(connection: Connection, message: ClientMessage): Pr
       for (const other of connectionsInRoom(session.roomId)) {
         if (other.playerId === session.playerId && other.ws !== ws) other.ws.close(4000, 'replaced');
       }
-      attach(connection, session.roomId, session.playerId);
+      await attach(connection, session.roomId, session.playerId);
       await manager.markConnected(session.roomId, session.playerId);
       const room = manager.getRoom(session.roomId);
       if (room) {
@@ -230,12 +257,22 @@ async function handleMessage(connection: Connection, message: ClientMessage): Pr
       return;
     }
     case 'seat:choose': {
-      const result = await manager.chooseSeat(roomId, playerId, message.seat);
+      const seat = asSeat(message.seat);
+      if (!seat) {
+        sendError(ws, { code: 'INVALID_MESSAGE', message: 'That is not a seat at this table.' });
+        return;
+      }
+      const result = await manager.chooseSeat(roomId, playerId, seat);
       if (handleResult(ws, result)) broadcastRoom(roomId);
       return;
     }
     case 'host:assignSeat': {
-      const result = await manager.assignSeat(roomId, playerId, message.playerId, message.seat);
+      const seat = asSeat(message.seat);
+      if (!seat || typeof message.playerId !== 'string') {
+        sendError(ws, { code: 'INVALID_MESSAGE', message: 'That is not a seat at this table.' });
+        return;
+      }
+      const result = await manager.assignSeat(roomId, playerId, message.playerId, seat);
       if (handleResult(ws, result)) broadcastRoom(roomId);
       return;
     }
@@ -254,7 +291,22 @@ async function handleMessage(connection: Connection, message: ClientMessage): Pr
       return;
     }
     case 'host:teamName': {
-      const result = await manager.renameTeam(roomId, playerId, message.teamId, message.name);
+      const teamId = asTeamId(message.teamId);
+      if (!teamId || typeof message.name !== 'string') {
+        sendError(ws, { code: 'INVALID_MESSAGE', message: 'That is not one of the two teams.' });
+        return;
+      }
+      const result = await manager.renameTeam(roomId, playerId, teamId, message.name);
+      if (handleResult(ws, result)) broadcastRoom(roomId);
+      return;
+    }
+    case 'host:endMatch': {
+      const result = await manager.endMatch(roomId, playerId);
+      if (handleResult(ws, result)) broadcastRoom(roomId);
+      return;
+    }
+    case 'host:skipTurn': {
+      const result = await manager.skipAbsentPlayer(roomId, playerId);
       if (handleResult(ws, result)) broadcastRoom(roomId);
       return;
     }
@@ -269,7 +321,15 @@ async function handleMessage(connection: Connection, message: ClientMessage): Pr
       return;
     }
     case 'game:action': {
-      const result = await manager.gameAction(roomId, playerId, message.actionId, message.action);
+      if (!message.action || typeof message.action !== 'object') {
+        sendError(ws, { code: 'INVALID_MESSAGE', message: 'That action was not understood.' });
+        return;
+      }
+      const action = {
+        ...message.action,
+        wildAssignments: asWildAssignments(message.action.wildAssignments),
+      };
+      const result = await manager.gameAction(roomId, playerId, message.actionId, action);
       const value = handleResult(ws, result, message.actionId);
       if (!value) return;
       broadcastRoom(roomId);
@@ -299,8 +359,28 @@ async function handleMessage(connection: Connection, message: ClientMessage): Pr
   }
 }
 
-wss.on('connection', (ws) => {
+/**
+ * Per-connection rate limiting does nothing about a client that simply opens
+ * more sockets, so the number from any one address is capped. Generous enough
+ * for a household playing together on one broadband line.
+ */
+function connectionsFrom(address: string): number {
+  let count = 0;
+  for (const connection of connections.values()) {
+    if (connection.address === address) count++;
+  }
+  return count;
+}
+
+wss.on('connection', (ws, request) => {
+  const address = request.socket.remoteAddress ?? 'unknown';
+  if (connectionsFrom(address) >= config.maxConnectionsPerAddress) {
+    ws.close(4029, 'too many connections');
+    return;
+  }
+
   const connection: Connection = {
+    address,
     ws,
     roomId: null,
     playerId: null,

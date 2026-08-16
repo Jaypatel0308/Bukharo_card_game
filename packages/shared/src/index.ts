@@ -42,6 +42,10 @@ export interface RoomView {
   youId: string | null;
   /** Set while an active player is disconnected and the table is waiting (§54). */
   waitingForPlayerId: string | null;
+  /** When that wait began, so the client can show the host when they may skip. */
+  waitingSince: number | null;
+  /** How long the table waits before the host may pass an absent player. */
+  disconnectGraceMs: number;
   createdAt: number;
 }
 
@@ -69,6 +73,8 @@ export type ClientMessage =
   | { type: 'host:kick'; playerId: string }
   | { type: 'host:settings'; targetScore: number }
   | { type: 'host:teamName'; teamId: TeamId; name: string }
+  | { type: 'host:endMatch' }
+  | { type: 'host:skipTurn' }
   | { type: 'game:start'; actionId: string }
   | { type: 'game:action'; actionId: string; action: GameActionPayload }
   | { type: 'round:next'; actionId: string }

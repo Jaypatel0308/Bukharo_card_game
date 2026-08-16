@@ -48,6 +48,8 @@ export interface Bukharo {
   kickPlayer(playerId: string): void;
   setTargetScore(targetScore: number): void;
   setTeamName(teamId: TeamId, name: string): void;
+  endMatch(): void;
+  skipAbsentPlayer(): void;
   startGame(): void;
   nextRound(): void;
   restartMatch(): void;
@@ -184,6 +186,8 @@ export function useBukharo(): Bukharo {
       kickPlayer: (playerId) => send({ type: 'host:kick', playerId }),
       setTargetScore: (targetScore) => send({ type: 'host:settings', targetScore }),
       setTeamName: (teamId, name) => send({ type: 'host:teamName', teamId, name }),
+      endMatch: () => send({ type: 'host:endMatch' }),
+      skipAbsentPlayer: () => send({ type: 'host:skipTurn' }),
       startGame: () => send({ type: 'game:start', actionId: newActionId() }),
       nextRound: () => send({ type: 'round:next', actionId: newActionId() }),
       restartMatch: () => send({ type: 'match:restart', actionId: newActionId() }),

@@ -34,6 +34,7 @@ export interface SelfView extends OpponentView {
 
 export interface TeamView {
   id: TeamId;
+  name: string;
   playerIds: string[];
   isOpened: boolean;
   matchScore: number;
@@ -138,6 +139,7 @@ function teamView(state: GameState, teamId: TeamId): TeamView {
   const team = state.teams[teamId];
   return {
     id: team.id,
+    name: team.name,
     playerIds: team.playerIds,
     isOpened: team.isOpened,
     matchScore: team.matchScore,

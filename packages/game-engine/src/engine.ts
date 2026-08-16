@@ -1,4 +1,4 @@
-import { cardLabel, createDeck } from './cards.js';
+import { DEFAULT_TEAM_NAMES, cardLabel, createDeck } from './cards.js';
 import {
   assignmentsOf,
   selectResolution,
@@ -112,10 +112,12 @@ export interface CreateMatchOptions {
   targetScore: number;
   rules: RuleConfig;
   rng: Rng;
+  /** Optional display names; the rooms layer lets the host set these. */
+  teamNames?: Partial<Record<TeamId, string>>;
 }
 
 export function createMatch(options: CreateMatchOptions): GameState {
-  const { roomId, seats, targetScore, rules, rng } = options;
+  const { roomId, seats, targetScore, rules, rng, teamNames } = options;
   if (seats.length !== 4) throw new Error('Bukharo requires exactly 4 seated players.');
 
   const players: GamePlayer[] = seats.map((seat) => ({
@@ -139,6 +141,7 @@ export function createMatch(options: CreateMatchOptions): GameState {
     teams: {
       TEAM_A: {
         id: 'TEAM_A',
+        name: teamNames?.TEAM_A?.trim() || DEFAULT_TEAM_NAMES.TEAM_A,
         playerIds: players.filter((p) => p.teamId === 'TEAM_A').map((p) => p.id),
         isOpened: false,
         matchScore: 0,
@@ -147,6 +150,7 @@ export function createMatch(options: CreateMatchOptions): GameState {
       },
       TEAM_B: {
         id: 'TEAM_B',
+        name: teamNames?.TEAM_B?.trim() || DEFAULT_TEAM_NAMES.TEAM_B,
         playerIds: players.filter((p) => p.teamId === 'TEAM_B').map((p) => p.id),
         isOpened: false,
         matchScore: 0,
@@ -388,7 +392,7 @@ function tryTakeBucharoo(draft: GameState, player: GamePlayer, rules: RuleConfig
     draft,
     player.id,
     'BUCHAROO_TAKEN',
-    `${player.displayName} took the Bucharoo (+${rules.bucharooBonus} for ${teamLabel(player.teamId)}).`,
+    `${player.displayName} took the Bucharoo (+${rules.bucharooBonus} for ${teamLabel(draft, player.teamId)}).`,
     { teamId: player.teamId },
   );
   events.push({
@@ -403,8 +407,16 @@ function tryTakeBucharoo(draft: GameState, player: GamePlayer, rules: RuleConfig
   return true;
 }
 
-function teamLabel(teamId: TeamId): string {
-  return teamId === 'TEAM_A' ? 'Team A' : 'Team B';
+function teamLabel(state: GameState, teamId: TeamId): string {
+  return state.teams[teamId].name || DEFAULT_TEAM_NAMES[teamId];
+}
+
+/** Renames a team. Purely cosmetic, so it does not bump the rules anywhere. */
+export function setTeamName(state: GameState, teamId: TeamId, name: string): GameState {
+  const draft = draftOf(state);
+  draft.teams[teamId].name = name.trim().slice(0, 20) || DEFAULT_TEAM_NAMES[teamId];
+  draft.stateVersion += 1;
+  return draft;
 }
 
 /** Could this player legally end the round right now? */
@@ -455,7 +467,7 @@ export function endRound(
     { endedBy },
   );
   if (winner) {
-    log(draft, null, 'MATCH_ENDED', `${teamLabel(winner)} wins the match.`, { winner });
+    log(draft, null, 'MATCH_ENDED', `${teamLabel(draft, winner)} wins the match.`, { winner });
   }
   return draft;
 }
@@ -653,7 +665,7 @@ function createMeld(
       draft,
       draftPlayer.id,
       'TEAM_OPENED',
-      `${draftPlayer.displayName} laid the opening run. ${teamLabel(draftPlayer.teamId)} is now open.`,
+      `${draftPlayer.displayName} laid the opening run. ${teamLabel(draft, draftPlayer.teamId)} is now open.`,
       { teamId: draftPlayer.teamId },
     );
     events.push({ type: 'TEAM_OPENED', payload: { teamId: draftPlayer.teamId, playerId: draftPlayer.id } });
@@ -673,7 +685,7 @@ function createMeld(
       draft,
       draftPlayer.id,
       'BUCHARO_COMPLETED',
-      `${teamLabel(meld.teamId)} completed a ${meld.bucharoBonusAwarded === 'CLEAN' ? 'clean' : 'dirty'} Bucharo.`,
+      `${teamLabel(draft, meld.teamId)} completed a ${meld.bucharoBonusAwarded === 'CLEAN' ? 'clean' : 'dirty'} Bucharo.`,
       { meldId: meld.id },
     );
     events.push({ type: 'BUCHARO_COMPLETED', payload: { meldId: meld.id, kind: meld.bucharoBonusAwarded } });
@@ -758,7 +770,7 @@ function addToMeld(
       draft,
       draftPlayer.id,
       'BUCHARO_COMPLETED',
-      `${teamLabel(draftMeld.teamId)} completed a ${draftMeld.bucharoBonusAwarded === 'CLEAN' ? 'clean' : 'dirty'} Bucharo.`,
+      `${teamLabel(draft, draftMeld.teamId)} completed a ${draftMeld.bucharoBonusAwarded === 'CLEAN' ? 'clean' : 'dirty'} Bucharo.`,
       { meldId: draftMeld.id },
     );
     events.push({ type: 'BUCHARO_COMPLETED', payload: { meldId: draftMeld.id, kind: draftMeld.bucharoBonusAwarded } });
@@ -811,7 +823,7 @@ function discardCard(
       draft,
       draftPlayer.id,
       'WENT_OUT',
-      `${draftPlayer.displayName} went out (+${rules.goingOutBonus} for ${teamLabel(draftPlayer.teamId)}).`,
+      `${draftPlayer.displayName} went out (+${rules.goingOutBonus} for ${teamLabel(draft, draftPlayer.teamId)}).`,
       { teamId: draftPlayer.teamId },
     );
     events.push({ type: 'PLAYER_WENT_OUT', payload: { playerId: draftPlayer.id, teamId: draftPlayer.teamId } });

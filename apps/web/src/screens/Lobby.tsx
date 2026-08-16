@@ -6,6 +6,7 @@ import type { Bukharo } from '../state/useBukharo';
 import { SEAT_LABEL } from '../ui/cards';
 
 const SEATS: Seat[] = ['NORTH', 'EAST', 'SOUTH', 'WEST'];
+const TEAMS: Array<'TEAM_A' | 'TEAM_B'> = ['TEAM_A', 'TEAM_B'];
 const TEAM_OF: Record<Seat, 'TEAM_A' | 'TEAM_B'> = {
   NORTH: 'TEAM_A',
   EAST: 'TEAM_B',
@@ -63,7 +64,7 @@ export function Lobby({ app }: { app: Bukharo }) {
               <div key={seat} className={`seat seat--${TEAM_OF[seat].toLowerCase()}`}>
                 <div className="seat__meta">
                   <span className="seat__position">{SEAT_LABEL[seat]}</span>
-                  <span className="seat__team">{TEAM_OF[seat] === 'TEAM_A' ? 'Team A' : 'Team B'}</span>
+                  <span className="seat__team">{room.teamNames[TEAM_OF[seat]]}</span>
                 </div>
                 {occupant ? (
                   <div className="seat__player">
@@ -102,6 +103,32 @@ export function Lobby({ app }: { app: Bukharo }) {
           })}
         </div>
         <p className="hint">Partners sit opposite each other. Tap an empty seat to move.</p>
+      </div>
+
+      <div className="panel">
+        <h2 className="panel__title">Teams</h2>
+        <div className="teamNames">
+          {TEAMS.map((teamId) => (
+            <div key={teamId} className="teamName">
+              <span
+                className={`teamName__swatch teamName__swatch--${teamId.toLowerCase()}`}
+                aria-hidden="true"
+              />
+              {isHost ? (
+                <input
+                  className="teamName__input"
+                  value={room.teamNames[teamId]}
+                  maxLength={20}
+                  aria-label={`Name for the ${teamId === 'TEAM_A' ? 'red' : 'blue'} team`}
+                  onChange={(event) => app.setTeamName(teamId, event.target.value)}
+                />
+              ) : (
+                <span className="teamName__static">{room.teamNames[teamId]}</span>
+              )}
+            </div>
+          ))}
+        </div>
+        {isHost && <p className="hint">Only you can rename the teams.</p>}
       </div>
 
       {isHost && (

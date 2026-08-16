@@ -17,7 +17,7 @@ export function RoundSummary({ app, room, game }: Props) {
   const winner = game.winningTeamId;
 
   const share = async (): Promise<void> => {
-    const text = `Bukharo — Team A ${game.teams.TEAM_A.matchScore}, Team B ${game.teams.TEAM_B.matchScore}`;
+    const text = `Bukharo — ${room.teamNames.TEAM_A} ${game.teams.TEAM_A.matchScore}, ${room.teamNames.TEAM_B} ${game.teams.TEAM_B.matchScore}`;
     try {
       if (navigator.share) await navigator.share({ title: 'Bukharo result', text });
       else await navigator.clipboard.writeText(text);
@@ -32,11 +32,11 @@ export function RoundSummary({ app, room, game }: Props) {
         {matchOver ? (
           <>
             <h2 className="result__title">
-              {winner ? `${winner === 'TEAM_A' ? 'Team A' : 'Team B'} wins` : 'Match drawn'}
+              {winner ? `${room.teamNames[winner]} wins` : 'Match drawn'}
             </h2>
             <p className="result__scores">
-              Team A {game.teams.TEAM_A.matchScore.toLocaleString()} · Team B{' '}
-              {game.teams.TEAM_B.matchScore.toLocaleString()}
+              {room.teamNames.TEAM_A} {game.teams.TEAM_A.matchScore.toLocaleString()} ·{' '}
+              {room.teamNames.TEAM_B} {game.teams.TEAM_B.matchScore.toLocaleString()}
             </p>
           </>
         ) : (
@@ -48,8 +48,8 @@ export function RoundSummary({ app, room, game }: Props) {
             {(['TEAM_A', 'TEAM_B'] as TeamId[]).map((teamId) => {
               const score = record.teams[teamId];
               return (
-                <section key={teamId} className="result__team">
-                  <h3>{teamId === 'TEAM_A' ? 'Team A' : 'Team B'}</h3>
+                <section key={teamId} className={`result__team result__team--${teamId.toLowerCase()}`}>
+                  <h3>{room.teamNames[teamId]}</h3>
                   <ul className="result__lines">
                     <li>
                       <span>Card points</span>

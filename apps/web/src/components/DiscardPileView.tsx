@@ -12,19 +12,22 @@ interface Props {
 }
 
 /**
- * The whole face-up discard pile (§19). Taking the pile is a big commitment —
- * it is every card, not just the top one — so the player can read it first.
- * The pile is public information: every player sees the same list.
+ * The whole face-up discard pile (§19). Taking it is a big commitment — it is
+ * every card, not just the top one — so the player can read it first.
+ *
+ * This is a sheet rather than a modal on purpose: it dims and blurs nothing,
+ * sits in the upper half of the screen, and lets taps through to the table, so
+ * the player can weigh the pile against the hand they are still looking at.
+ * The pile is public information, so every player may open it.
  */
 export function DiscardPileView({ cards, wildRank, onTake, onClose }: Props) {
-  // Bottom of the pile first, the way it would be spread on a table.
   const points = cards.reduce((total, card) => total + card.basePointValue, 0);
   const wilds = cards.filter((card) => isWild(card, wildRank)).length;
 
   return (
-    <div className="drawer" role="dialog" aria-modal="true" aria-label="Discard pile">
-      <div className="drawer__body">
-        <header className="drawer__header">
+    <div className="sheet">
+      <div className="sheet__body" role="dialog" aria-label="Discard pile">
+        <header className="sheet__header">
           <h2>Discard pile</h2>
           <button type="button" className="iconButton" onClick={onClose} aria-label="Close discard pile">
             ✕
@@ -32,12 +35,12 @@ export function DiscardPileView({ cards, wildRank, onTake, onClose }: Props) {
         </header>
 
         {cards.length === 0 ? (
-          <p className="drawer__note">The pile is empty — you will have to draw from the stock.</p>
+          <p className="sheet__note">The pile is empty — you will have to draw from the stock.</p>
         ) : (
           <>
-            <p className="drawer__note">
+            <p className="sheet__note">
               {cards.length} card{cards.length === 1 ? '' : 's'} · {points} points
-              {wilds > 0 && ` · ${wilds} wild${wilds === 1 ? '' : 's'}`}
+              {wilds > 0 && ` · ${wilds} wild${wilds === 1 ? '' : 's'}`} · bottom first
             </p>
 
             <ol className="pileList">
@@ -48,11 +51,10 @@ export function DiscardPileView({ cards, wildRank, onTake, onClose }: Props) {
                 </li>
               ))}
             </ol>
-            <p className="hint">Bottom of the pile first. Taking it takes every card.</p>
           </>
         )}
 
-        <div className="modal__actions">
+        <div className="sheet__actions">
           <button type="button" className="button button--ghost" onClick={onClose}>
             Close
           </button>

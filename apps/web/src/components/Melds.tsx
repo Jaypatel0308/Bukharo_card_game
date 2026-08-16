@@ -1,6 +1,7 @@
 import type { Meld, NaturalRank, TeamId } from '@bukharo/game-engine';
 
 import { PlayingCard } from './PlayingCard';
+import { initialsOf } from './TopBar';
 import { SUIT_SYMBOL } from '../ui/cards';
 
 interface Props {
@@ -9,6 +10,7 @@ interface Props {
   title: string;
   isOpened: boolean;
   wildRank: NaturalRank | null;
+  openingRunMinimum: number;
   /** Set when the player is choosing a meld to extend. */
   selectableMeldId?: string | null;
   onSelectMeld?(meldId: string): void;
@@ -21,6 +23,7 @@ export function Melds({
   title,
   isOpened,
   wildRank,
+  openingRunMinimum,
   selectableMeldId,
   onSelectMeld,
   canAdd = false,
@@ -28,9 +31,12 @@ export function Melds({
   const teamMelds = melds.filter((m) => m.teamId === teamId);
 
   return (
-    <section className="melds" aria-label={`${title} melds`}>
+    <section className={`melds melds--${teamId.toLowerCase()}`} aria-label={`${title} melds`}>
       <header className="melds__header">
-        <h3>{title}</h3>
+        <h3>
+          <span className={`pip pip--${teamId.toLowerCase()}`}>{initialsOf(title)}</span>
+          {title}
+        </h3>
         <span className={`badge ${isOpened ? 'badge--open' : 'badge--closed'}`}>
           {isOpened ? 'Open' : 'Not open'}
         </span>
@@ -38,7 +44,7 @@ export function Melds({
 
       {teamMelds.length === 0 && (
         <p className="melds__empty">
-          {isOpened ? 'No melds yet.' : 'Needs a clean run of 4+ to open.'}
+          {isOpened ? 'No melds yet.' : `Needs a clean run of ${openingRunMinimum}+ to open.`}
         </p>
       )}
 

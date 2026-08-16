@@ -74,6 +74,8 @@ export interface GamePlayer {
 
 export interface TeamState {
   id: TeamId;
+  /** Display name. Presentational, like GamePlayer.displayName. */
+  name: string;
   playerIds: string[];
   isOpened: boolean;
   matchScore: number;

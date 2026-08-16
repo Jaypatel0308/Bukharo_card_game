@@ -32,6 +32,8 @@ export interface RoomView {
   status: RoomStatus;
   targetScore: number;
   hostId: string | null;
+  /** Host-editable display names for the two teams. */
+  teamNames: Record<TeamId, string>;
   players: RoomPlayerView[];
   /** Null while the room is still in the lobby. */
   game: GameView | null;
@@ -66,6 +68,7 @@ export type ClientMessage =
   | { type: 'host:assignSeat'; playerId: string; seat: Seat }
   | { type: 'host:kick'; playerId: string }
   | { type: 'host:settings'; targetScore: number }
+  | { type: 'host:teamName'; teamId: TeamId; name: string }
   | { type: 'game:start'; actionId: string }
   | { type: 'game:action'; actionId: string; action: GameActionPayload }
   | { type: 'round:next'; actionId: string }

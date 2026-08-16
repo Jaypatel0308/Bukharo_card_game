@@ -1,0 +1,314 @@
+/*
+ * Playing cards.
+ *
+ * Proportions follow a real poker card (2.5 by 3.5 inches, so height is 1.4x
+ * width). Everything inside scales from a single custom property per size, so
+ * the face keeps its proportions at every scale.
+ */
+
+.card {
+  --card-w: 3.1rem;
+  --card-h: calc(var(--card-w) * 1.4);
+  --card-pad: calc(var(--card-w) * 0.06);
+
+  position: relative;
+  display: block;
+  flex: 0 0 auto;
+  width: var(--card-w);
+  height: var(--card-h);
+  padding: 0;
+  border: none;
+  border-radius: calc(var(--card-w) * 0.11);
+  background:
+    linear-gradient(160deg, #ffffff 0%, var(--card-face) 42%, var(--card-face-edge) 100%);
+  color: var(--card-black);
+  font-family: "Iowan Old Style", Palatino, "Palatino Linotype", Georgia, serif;
+  font-weight: 700;
+  /* A hairline edge, a soft contact shadow and an inner highlight: enough to
+     read as a physical card without a texture image. */
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 1px 2px rgba(0, 0, 0, 0.35),
+    0 4px 10px rgba(0, 0, 0, 0.28);
+  user-select: none;
+  overflow: hidden;
+}
+
+.card--xs { --card-w: 1.85rem; }
+.card--sm { --card-w: 2.45rem; }
+.card--md { --card-w: 3.1rem; }
+.card--lg { --card-w: 4.2rem; }
+
+@media (min-width: 720px) {
+  .card--md { --card-w: 3.5rem; }
+  .card--lg { --card-w: 5rem; }
+}
+
+.card--red { color: var(--card-red); }
+.card--black { color: var(--card-black); }
+
+/* ---- corner indices ---- */
+
+.card__index {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 0.92;
+}
+
+.card__index--tl {
+  top: var(--card-pad);
+  left: var(--card-pad);
+}
+
+/* The bottom index is rotated, exactly as it is printed. */
+.card__index--br {
+  right: var(--card-pad);
+  bottom: var(--card-pad);
+  transform: rotate(180deg);
+}
+
+.card__rank {
+  font-size: calc(var(--card-w) * 0.29);
+  letter-spacing: -0.03em;
+}
+
+.card__suitMark {
+  font-size: calc(var(--card-w) * 0.21);
+  line-height: 1;
+}
+
+/* Below a certain size a second index is clutter rather than detail. */
+.card--xs .card__index--br,
+.card--sm .card__index--br {
+  display: none;
+}
+
+/* ---- centre: pips ---- */
+
+.card__pips {
+  position: absolute;
+  inset: calc(var(--card-w) * 0.26) calc(var(--card-w) * 0.15);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(7, 1fr);
+  place-items: center;
+}
+
+.card__pip {
+  font-size: calc(var(--card-w) * 0.26);
+  line-height: 1;
+}
+
+.card__pip.is-inverted {
+  transform: rotate(180deg);
+}
+
+.card__pipFallback {
+  display: none;
+  grid-column: 1 / -1;
+  grid-row: 1 / -1;
+  font-size: calc(var(--card-w) * 0.6);
+}
+
+/* Ten pips cannot be legible on a 30px card, so the small sizes show one. */
+.card--xs .card__pip,
+.card--sm .card__pip {
+  display: none;
+}
+
+.card--xs .card__pipFallback,
+.card--sm .card__pipFallback {
+  display: block;
+}
+
+/* ---- centre: ace, court, joker ---- */
+
+.card__centre {
+  position: absolute;
+  inset: calc(var(--card-w) * 0.24) calc(var(--card-w) * 0.12);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.card__centre--ace {
+  font-size: calc(var(--card-w) * 0.72);
+  line-height: 1;
+}
+
+.card__centre--court {
+  gap: calc(var(--card-w) * 0.02);
+  border: 1px solid currentColor;
+  border-radius: calc(var(--card-w) * 0.06);
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent calc(var(--card-w) * 0.06),
+    rgba(0, 0, 0, 0.045) calc(var(--card-w) * 0.06),
+    rgba(0, 0, 0, 0.045) calc(var(--card-w) * 0.12)
+  );
+  opacity: 0.95;
+}
+
+.card__monogram {
+  font-size: calc(var(--card-w) * 0.44);
+  line-height: 1;
+}
+
+.card__courtSuit {
+  font-size: calc(var(--card-w) * 0.25);
+  line-height: 1;
+}
+
+.card--xs .card__centre--court,
+.card--sm .card__centre--court {
+  border: none;
+  background: none;
+}
+
+.card--joker {
+  color: #7a2ea8;
+}
+
+.card__centre--joker {
+  gap: calc(var(--card-w) * 0.03);
+}
+
+.card__jokerMark {
+  font-size: calc(var(--card-w) * 0.5);
+  line-height: 1;
+}
+
+.card__jokerWord {
+  font-size: calc(var(--card-w) * 0.15);
+  letter-spacing: 0.08em;
+}
+
+.card--xs .card__jokerWord,
+.card--sm .card__jokerWord {
+  display: none;
+}
+
+/* ---- states ---- */
+
+.card--button {
+  cursor: pointer;
+  transition: transform 0.14s ease, box-shadow 0.14s ease;
+}
+
+.card--button:disabled {
+  cursor: default;
+}
+
+.card--button:hover:not(:disabled) {
+  transform: translateY(-4px);
+}
+
+.card.is-selected {
+  transform: translateY(-16px);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.16),
+    0 0 0 3px var(--gold),
+    0 10px 16px rgba(0, 0, 0, 0.5);
+}
+
+.card.is-wild::after {
+  content: "";
+  position: absolute;
+  inset: calc(var(--card-w) * 0.045);
+  border: 2px dashed rgba(232, 196, 106, 0.95);
+  border-radius: calc(var(--card-w) * 0.08);
+  pointer-events: none;
+}
+
+.card.is-new {
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.16),
+    0 0 0 2px var(--good),
+    0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+.card.is-new.is-selected {
+  box-shadow:
+    0 0 0 3px var(--gold),
+    0 0 0 5px var(--good),
+    0 10px 16px rgba(0, 0, 0, 0.5);
+}
+
+.card__wild,
+.card__new {
+  position: absolute;
+  z-index: 2;
+  line-height: 1;
+}
+
+.card__wild {
+  right: calc(var(--card-w) * 0.05);
+  top: calc(var(--card-w) * 0.05);
+  padding: 0 calc(var(--card-w) * 0.06);
+  border-radius: calc(var(--card-w) * 0.06);
+  background: var(--gold);
+  color: #24200f;
+  font-size: calc(var(--card-w) * 0.19);
+  font-family: system-ui, sans-serif;
+}
+
+.card__new {
+  left: calc(var(--card-w) * 0.06);
+  bottom: calc(var(--card-w) * 0.05);
+  color: var(--good);
+  font-size: calc(var(--card-w) * 0.2);
+}
+
+.card__representing {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--card-w) * -0.02);
+  z-index: 2;
+  padding: 0 calc(var(--card-w) * 0.08);
+  border-radius: calc(var(--card-w) * 0.06);
+  background: var(--felt-deep);
+  border: 1px solid var(--gold);
+  color: var(--gold);
+  font-family: system-ui, sans-serif;
+  font-size: calc(var(--card-w) * 0.17);
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+/* ---- backs and empty slots ---- */
+
+.card--back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    repeating-linear-gradient(45deg, #163a63 0 6px, #1d4a7d 6px 12px);
+  color: #fff;
+  font-family: system-ui, sans-serif;
+}
+
+.card__backPattern {
+  position: absolute;
+  inset: calc(var(--card-w) * 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: calc(var(--card-w) * 0.07);
+}
+
+.card__count {
+  position: relative;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  font-size: calc(var(--card-w) * 0.24);
+  font-weight: 700;
+}
+
+.card--empty {
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 0 0 1px var(--line);
+}

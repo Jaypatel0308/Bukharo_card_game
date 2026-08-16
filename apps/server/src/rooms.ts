@@ -2,17 +2,20 @@ import { randomInt, randomFillSync } from 'node:crypto';
 
 import {
   DEFAULT_RULES,
+  DEFAULT_TEAM_NAMES,
   SEAT_ORDER,
   SEAT_TEAMS,
   applyAction,
   createMatch,
   cryptoRng,
+  setTeamName,
   startNextRound,
   viewFor,
   type EngineEvent,
   type GameAction,
   type GameState,
   type Seat,
+  type TeamId,
 } from '@bukharo/game-engine';
 import {
   MAX_TARGET_SCORE,
@@ -160,6 +163,7 @@ export class RoomManager {
       status: 'LOBBY',
       targetScore: clampTarget(targetScore),
       rules: { ...DEFAULT_RULES, targetScore: clampTarget(targetScore) },
+      teamNames: { ...DEFAULT_TEAM_NAMES },
       players: [player],
       game: null,
       createdAt: now,
@@ -279,6 +283,22 @@ export class RoomManager {
     });
   }
 
+  async renameTeam(
+    roomId: string,
+    hostId: string,
+    teamId: TeamId,
+    name: string,
+  ): Promise<OpResult<Room>> {
+    return this.mutate(roomId, hostId, (room, host) => {
+      if (!host.isHost) return fail('NOT_HOST', 'Only the host can rename the teams.');
+      const clean = cleanName(name) || DEFAULT_TEAM_NAMES[teamId];
+      room.teamNames[teamId] = clean;
+      // A match in progress carries its own copy, used by the game log.
+      if (room.game) room.game = setTeamName(room.game, teamId, clean);
+      return { ok: true as const, value: room };
+    });
+  }
+
   /* ---------------------------------------------------------------- */
   /* Match lifecycle                                                   */
   /* ---------------------------------------------------------------- */
@@ -306,6 +326,7 @@ export class RoomManager {
         targetScore: room.targetScore,
         rules: room.rules,
         rng,
+        teamNames: room.teamNames,
       });
       stampLog(room.game);
       room.status = 'PLAYING';
@@ -342,6 +363,7 @@ export class RoomManager {
         targetScore: room.targetScore,
         rules: room.rules,
         rng,
+        teamNames: room.teamNames,
       });
       stampLog(room.game);
       room.status = 'PLAYING';
@@ -594,6 +616,7 @@ export function roomView(room: Room, viewerId: string | null): RoomView {
     status: room.status,
     targetScore: room.targetScore,
     hostId: room.players.find((p) => p.isHost)?.id ?? null,
+    teamNames: { ...DEFAULT_TEAM_NAMES, ...room.teamNames },
     players: room.players.map((player) => ({
       id: player.id,
       displayName: player.displayName,

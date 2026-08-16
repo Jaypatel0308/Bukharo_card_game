@@ -1,0 +1,132 @@
+/* Design tokens, resets and typography. */
+
+:root {
+  --felt-deep: #0b1f18;
+  --felt: #123529;
+  --felt-light: #17422f;
+  --ink: #f2f6f3;
+  --ink-dim: #a9c0b4;
+  --line: rgba(255, 255, 255, 0.14);
+  --gold: #e8c46a;
+
+  /* Teams read as red and blue. Both stay distinguishable under the common
+     forms of colour blindness, and neither is ever the only signal: names and
+     initials carry the same information. */
+  --team-a: #ef4d5a;
+  --team-a-soft: rgba(239, 77, 90, 0.18);
+  --team-b: #4d94ef;
+  --team-b-soft: rgba(77, 148, 239, 0.18);
+
+  --danger: #ff7a70;
+  --good: #7fd6a0;
+
+  --card-face: #fbfaf5;
+  --card-face-edge: #e7e3d6;
+  --card-red: #c8102e;
+  --card-black: #1b2530;
+
+  --radius: 12px;
+  --tap: 44px;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+}
+
+body {
+  background: radial-gradient(circle at 50% 0%, var(--felt-light), var(--felt-deep) 70%);
+  color: var(--ink);
+  font-family: ui-rounded, "SF Pro Rounded", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 16px;
+  line-height: 1.45;
+  -webkit-text-size-adjust: 100%;
+}
+
+.app {
+  min-height: 100dvh;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+    env(safe-area-inset-left);
+}
+
+h1,
+h2,
+h3 {
+  margin: 0 0 0.4em;
+  line-height: 1.2;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+:focus-visible {
+  outline: 3px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.screen {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.panel {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.panel__title {
+  font-size: 1rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+
+.hint {
+  margin: 0.6rem 0 0;
+  color: var(--ink-dim);
+  font-size: 0.85rem;
+}
+
+.connbar {
+  padding: 0.4rem 1rem;
+  background: var(--gold);
+  color: #24200f;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --line: rgba(255, 255, 255, 0.5);
+    --ink-dim: #dce8e1;
+  }
+}

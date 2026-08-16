@@ -90,6 +90,11 @@ export function cardLabel(card: Card): string {
   return `${card.rank}${SUIT_SYMBOLS[card.suit!]}`;
 }
 
+export const DEFAULT_TEAM_NAMES = {
+  TEAM_A: 'Team A',
+  TEAM_B: 'Team B',
+} as const;
+
 export function sumPoints(cards: Card[]): number {
   return cards.reduce((total, card) => total + card.basePointValue, 0);
 }

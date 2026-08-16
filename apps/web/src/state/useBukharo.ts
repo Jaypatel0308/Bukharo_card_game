@@ -4,6 +4,7 @@ import type {
   RoomView,
   Seat,
   ServerError,
+  TeamId,
   ServerMessage,
   WildAssignment,
 } from '@bukharo/shared';
@@ -46,6 +47,7 @@ export interface Bukharo {
   assignSeat(playerId: string, seat: Seat): void;
   kickPlayer(playerId: string): void;
   setTargetScore(targetScore: number): void;
+  setTeamName(teamId: TeamId, name: string): void;
   startGame(): void;
   nextRound(): void;
   restartMatch(): void;
@@ -181,6 +183,7 @@ export function useBukharo(): Bukharo {
       assignSeat: (playerId, seat) => send({ type: 'host:assignSeat', playerId, seat }),
       kickPlayer: (playerId) => send({ type: 'host:kick', playerId }),
       setTargetScore: (targetScore) => send({ type: 'host:settings', targetScore }),
+      setTeamName: (teamId, name) => send({ type: 'host:teamName', teamId, name }),
       startGame: () => send({ type: 'game:start', actionId: newActionId() }),
       nextRound: () => send({ type: 'round:next', actionId: newActionId() }),
       restartMatch: () => send({ type: 'match:restart', actionId: newActionId() }),

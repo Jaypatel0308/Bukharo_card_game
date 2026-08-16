@@ -1,6 +1,12 @@
-import type { GameView } from '@bukharo/game-engine';
+import type { GameView, TeamId } from '@bukharo/game-engine';
 
-export function Scoreboard({ game, onClose }: { game: GameView; onClose(): void }) {
+interface Props {
+  game: GameView;
+  teamNames: Record<TeamId, string>;
+  onClose(): void;
+}
+
+export function Scoreboard({ game, teamNames, onClose }: Props) {
   return (
     <div className="drawer" role="dialog" aria-modal="true" aria-label="Scoreboard">
       <div className="drawer__body">
@@ -17,8 +23,12 @@ export function Scoreboard({ game, onClose }: { game: GameView; onClose(): void 
           <thead>
             <tr>
               <th scope="col">Round</th>
-              <th scope="col">Team A</th>
-              <th scope="col">Team B</th>
+              <th scope="col" className="scoretable__team--team_a">
+                {teamNames.TEAM_A}
+              </th>
+              <th scope="col" className="scoretable__team--team_b">
+                {teamNames.TEAM_B}
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -58,7 +68,7 @@ export function Scoreboard({ game, onClose }: { game: GameView; onClose(): void 
                   const score = record.teams[teamId];
                   return (
                     <dl key={teamId} className="breakdown__list">
-                      <dt className="breakdown__team">{teamId === 'TEAM_A' ? 'Team A' : 'Team B'}</dt>
+                      <dt className="breakdown__team">{teamNames[teamId]}</dt>
                       <dd>
                         <Row label="Card points" value={score.cardPoints} />
                         <Row label="Clean Bucharos" value={score.cleanBucharoBonus} />

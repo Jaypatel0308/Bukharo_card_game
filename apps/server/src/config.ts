@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 function num(name: string, fallback: number): number {
   const raw = process.env[name];
@@ -7,13 +8,21 @@ function num(name: string, fallback: number): number {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+/**
+ * Paths are resolved from this file's own location, never from the working
+ * directory: `npm start -w @bukharo/server` runs with the cwd set to
+ * apps/server, which would otherwise send every default path one level too
+ * deep. This file lives at <repo>/apps/server/dist/config.js once built.
+ */
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
+
 export const config = {
   port: num('PORT', 8787),
   host: process.env.HOST ?? '0.0.0.0',
   /** Active game state lives here so a restart does not destroy games (§61). */
-  dataDir: path.resolve(process.env.DATA_DIR ?? path.join(process.cwd(), 'data')),
+  dataDir: path.resolve(process.env.DATA_DIR ?? path.join(repoRoot, 'data')),
   /** Built web client, served by the same process in production. */
-  webDir: path.resolve(process.env.WEB_DIR ?? path.join(process.cwd(), 'apps/web/dist')),
+  webDir: path.resolve(process.env.WEB_DIR ?? path.join(repoRoot, 'apps/web/dist')),
 
   /** §54 — how long the table waits for a disconnected player before the host may act. */
   disconnectGraceMs: num('DISCONNECT_GRACE_MS', 90_000),

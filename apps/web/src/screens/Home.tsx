@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { TARGET_SCORE_OPTIONS } from '@bukharo/shared';
 
+import { ThemePicker } from '../components/ThemePicker';
 import type { Bukharo } from '../state/useBukharo';
 import { roomCodeFromUrl } from '../state/useBukharo';
 
@@ -117,6 +118,11 @@ export function Home({ app }: { app: Bukharo }) {
             {mode === 'create' ? 'Create room' : 'Join game'}
           </button>
         </form>
+      </div>
+
+      <div className="panel">
+        <h2 className="panel__title">Table theme</h2>
+        <ThemePicker />
       </div>
 
       <details className="rules">

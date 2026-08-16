@@ -1,0 +1,90 @@
+/*
+ * Themes.
+ *
+ * Every colour in the app comes from the token contract below, so a theme is
+ * just one block of values and nothing else in the codebase needs to change to
+ * add another. Themes are applied by setting `data-theme` on <html>; the
+ * default block doubles as the fallback when no choice has been stored.
+ *
+ * The token contract:
+ *   --surface-deep / --surface / --surface-raised   the table, back to front
+ *   --ink / --ink-dim                                text, primary and muted
+ *   --line                                           hairlines and borders
+ *   --accent / --accent-ink                          highlights, and text on them
+ *   --team-a / --team-b                              always red and blue
+ *   --card-back-a / --card-back-b                    the pattern on a face-down card
+ *
+ * Card faces are deliberately not themed: a playing card is white in every
+ * room, and re-tinting it would only make the pips harder to read.
+ */
+
+:root,
+[data-theme='emerald'] {
+  --surface-deep: #08251c;
+  --surface: #0e3527;
+  --surface-raised: #14452f;
+  --ink: #f1f7f3;
+  --ink-dim: #9db8ab;
+  --line: rgba(255, 255, 255, 0.14);
+  --accent: #f0c968;
+  --accent-ink: #241f0d;
+  --card-back-a: #0d4a6b;
+  --card-back-b: #14618a;
+}
+
+[data-theme='midnight'] {
+  --surface-deep: #0b1020;
+  --surface: #141b32;
+  --surface-raised: #1d2745;
+  --ink: #eef1fa;
+  --ink-dim: #a4acc8;
+  --line: rgba(255, 255, 255, 0.16);
+  --accent: #7dd3fc;
+  --accent-ink: #06202e;
+  --card-back-a: #27306b;
+  --card-back-b: #3a4694;
+}
+
+[data-theme='claret'] {
+  --surface-deep: #1e0d12;
+  --surface: #33161e;
+  --surface-raised: #45202a;
+  --ink: #fbf1f0;
+  --ink-dim: #c7a5a6;
+  --line: rgba(255, 255, 255, 0.15);
+  --accent: #e8b04b;
+  --accent-ink: #2a1c05;
+  --card-back-a: #6a1b2a;
+  --card-back-b: #8f2739;
+}
+
+[data-theme='slate'] {
+  --surface-deep: #10141a;
+  --surface: #1b2129;
+  --surface-raised: #262e39;
+  --ink: #eef2f6;
+  --ink-dim: #a3aeba;
+  --line: rgba(255, 255, 255, 0.15);
+  --accent: #5eead4;
+  --accent-ink: #06231e;
+  --card-back-a: #2b3a4a;
+  --card-back-b: #3d5468;
+}
+
+/* Teams are red and blue in every theme: they identify people, not decoration. */
+:root {
+  --team-a: #ef4d5a;
+  --team-a-soft: rgba(239, 77, 90, 0.18);
+  --team-b: #4d94ef;
+  --team-b-soft: rgba(77, 148, 239, 0.18);
+
+  --danger: #ff7a70;
+  --good: #6fd39b;
+  --warn: #ffb066;
+
+  /* Card faces: constant across themes. */
+  --card-face: #ffffff;
+  --card-face-edge: #eceadf;
+  --card-red: #d0021b;
+  --card-black: #16202b;
+}

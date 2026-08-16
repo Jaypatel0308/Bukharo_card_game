@@ -76,7 +76,7 @@
 .topbar__bucharooState {
   font-size: 0.82rem;
   font-weight: 700;
-  color: var(--gold);
+  color: var(--accent);
 }
 
 .topbar__bucharooState.is-taken {
@@ -100,8 +100,8 @@
 
 .turnbar.is-yours {
   background: rgba(232, 196, 106, 0.2);
-  border: 1px solid var(--gold);
-  color: var(--gold);
+  border: 1px solid var(--accent);
+  color: var(--accent);
 }
 
 /* ---- seats ---- */
@@ -142,8 +142,8 @@
 }
 
 .opponent.is-active {
-  border-color: var(--gold);
-  box-shadow: 0 0 0 1px var(--gold);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
 }
 
 .opponent.is-empty {
@@ -176,7 +176,7 @@
   height: 3px;
   margin-top: 0.3rem;
   border-radius: 2px;
-  background: var(--gold);
+  background: var(--accent);
 }
 
 /* ---- centre piles: wild, stock, discard ---- */
@@ -225,12 +225,12 @@
 .pile--wild .card {
   box-shadow:
     inset 0 0 0 1px rgba(0, 0, 0, 0.16),
-    0 0 0 2px var(--gold),
+    0 0 0 2px var(--accent),
     0 4px 10px rgba(0, 0, 0, 0.3);
 }
 
 .pile__wildRank {
-  color: var(--gold);
+  color: var(--accent);
   font-weight: 800;
 }
 
@@ -306,8 +306,8 @@
 }
 
 .meld.is-selected {
-  border-color: var(--gold);
-  box-shadow: 0 0 0 2px var(--gold);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent);
 }
 
 .meld__cards {
@@ -337,12 +337,12 @@
 
 .ribbon--clean {
   background: var(--good);
-  color: #08281a;
+  color: #06231b;
 }
 
 .ribbon--dirty {
-  background: var(--gold);
-  color: #2c2408;
+  background: var(--accent);
+  color: var(--accent-ink);
 }
 
 /* ---- hand ---- */
@@ -408,7 +408,7 @@
   flex-direction: column;
   gap: 0.4rem;
   padding: 0.5rem 0;
-  background: linear-gradient(to top, var(--felt-deep) 78%, transparent);
+  background: linear-gradient(to top, var(--surface-deep) 78%, transparent);
 }
 
 .actionbar__row {
@@ -433,8 +433,8 @@
 
 .hint--problem {
   border-color: var(--danger);
-  background: rgba(255, 122, 112, 0.12);
-  color: #ffdedb;
+  background: color-mix(in srgb, var(--danger) 14%, transparent);
+  color: color-mix(in srgb, var(--danger) 30%, white);
 }
 
 @media (min-width: 720px) {

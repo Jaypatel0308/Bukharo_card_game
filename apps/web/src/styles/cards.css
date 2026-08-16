@@ -1,15 +1,20 @@
 /*
  * Playing cards.
  *
- * Proportions follow a real poker card (2.5 by 3.5 inches, so height is 1.4x
- * width). Everything inside scales from a single custom property per size, so
- * the face keeps its proportions at every scale.
+ * Modelled on the cards used by the common online card games: a flat white
+ * face, a heavy sans-serif index that stays legible when the card is thumbnail
+ * sized, real pip layouts on the number cards, and a framed court card. The
+ * proportions are those of a poker card, 2.5 by 3.5, so height is 1.4x width.
+ *
+ * Everything scales from `--card-w`, so one variable changes a card completely
+ * and the design holds at every size.
  */
 
 .card {
-  --card-w: 3.1rem;
+  --card-w: 3.2rem;
   --card-h: calc(var(--card-w) * 1.4);
-  --card-pad: calc(var(--card-w) * 0.06);
+  --card-pad: calc(var(--card-w) * 0.055);
+  --card-radius: calc(var(--card-w) * 0.1);
 
   position: relative;
   display: block;
@@ -18,31 +23,29 @@
   height: var(--card-h);
   padding: 0;
   border: none;
-  border-radius: calc(var(--card-w) * 0.11);
-  background:
-    linear-gradient(160deg, #ffffff 0%, var(--card-face) 42%, var(--card-face-edge) 100%);
+  border-radius: var(--card-radius);
+  background: var(--card-face);
   color: var(--card-black);
-  font-family: "Iowan Old Style", Palatino, "Palatino Linotype", Georgia, serif;
+  font-family: "Helvetica Neue", Helvetica, Arial, system-ui, sans-serif;
   font-weight: 700;
-  /* A hairline edge, a soft contact shadow and an inner highlight: enough to
-     read as a physical card without a texture image. */
+  /* A crisp edge and a close contact shadow. Online card faces are flat: the
+     depth comes from the shadow, not from gradients across the face. */
   box-shadow:
-    inset 0 0 0 1px rgba(0, 0, 0, 0.16),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9),
-    0 1px 2px rgba(0, 0, 0, 0.35),
-    0 4px 10px rgba(0, 0, 0, 0.28);
+    inset 0 0 0 1px rgba(15, 23, 32, 0.18),
+    0 1px 1px rgba(0, 0, 0, 0.28),
+    0 3px 8px rgba(0, 0, 0, 0.22);
   user-select: none;
   overflow: hidden;
 }
 
-.card--xs { --card-w: 1.85rem; }
-.card--sm { --card-w: 2.45rem; }
-.card--md { --card-w: 3.1rem; }
-.card--lg { --card-w: 4.2rem; }
+.card--xs { --card-w: 1.9rem; }
+.card--sm { --card-w: 2.5rem; }
+.card--md { --card-w: 3.2rem; }
+.card--lg { --card-w: 4.4rem; }
 
 @media (min-width: 720px) {
-  .card--md { --card-w: 3.5rem; }
-  .card--lg { --card-w: 5rem; }
+  .card--md { --card-w: 3.6rem; }
+  .card--lg { --card-w: 5.2rem; }
 }
 
 .card--red { color: var(--card-red); }
@@ -55,28 +58,30 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  line-height: 0.92;
+  line-height: 0.86;
 }
 
 .card__index--tl {
   top: var(--card-pad);
-  left: var(--card-pad);
+  left: calc(var(--card-pad) * 1.4);
 }
 
-/* The bottom index is rotated, exactly as it is printed. */
+/* Rotated, exactly as it is printed, so the card reads either way up. */
 .card__index--br {
-  right: var(--card-pad);
+  right: calc(var(--card-pad) * 1.4);
   bottom: var(--card-pad);
   transform: rotate(180deg);
 }
 
 .card__rank {
-  font-size: calc(var(--card-w) * 0.29);
-  letter-spacing: -0.03em;
+  font-size: calc(var(--card-w) * 0.33);
+  font-weight: 800;
+  letter-spacing: -0.05em;
 }
 
 .card__suitMark {
-  font-size: calc(var(--card-w) * 0.21);
+  margin-top: calc(var(--card-w) * 0.01);
+  font-size: calc(var(--card-w) * 0.2);
   line-height: 1;
 }
 
@@ -86,11 +91,17 @@
   display: none;
 }
 
+/* Small cards give the remaining index the room instead. */
+.card--xs .card__rank,
+.card--sm .card__rank {
+  font-size: calc(var(--card-w) * 0.4);
+}
+
 /* ---- centre: pips ---- */
 
 .card__pips {
   position: absolute;
-  inset: calc(var(--card-w) * 0.26) calc(var(--card-w) * 0.15);
+  inset: calc(var(--card-w) * 0.24) calc(var(--card-w) * 0.2);
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   grid-template-rows: repeat(7, 1fr);
@@ -98,7 +109,7 @@
 }
 
 .card__pip {
-  font-size: calc(var(--card-w) * 0.26);
+  font-size: calc(var(--card-w) * 0.25);
   line-height: 1;
 }
 
@@ -110,10 +121,10 @@
   display: none;
   grid-column: 1 / -1;
   grid-row: 1 / -1;
-  font-size: calc(var(--card-w) * 0.6);
+  font-size: calc(var(--card-w) * 0.52);
 }
 
-/* Ten pips cannot be legible on a 30px card, so the small sizes show one. */
+/* Ten pips cannot be legible on a thumbnail, so small sizes show one. */
 .card--xs .card__pip,
 .card--sm .card__pip {
   display: none;
@@ -128,7 +139,7 @@
 
 .card__centre {
   position: absolute;
-  inset: calc(var(--card-w) * 0.24) calc(var(--card-w) * 0.12);
+  inset: calc(var(--card-w) * 0.22) calc(var(--card-w) * 0.16);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -136,31 +147,31 @@
 }
 
 .card__centre--ace {
-  font-size: calc(var(--card-w) * 0.72);
+  font-size: calc(var(--card-w) * 0.78);
   line-height: 1;
 }
 
+/*
+ * Court cards: a tinted panel with a rule and a large letter. Not illustrated
+ * figures — those need authored artwork — but distinctly a court card at a
+ * glance, which is what a table full of cards actually needs.
+ */
 .card__centre--court {
-  gap: calc(var(--card-w) * 0.02);
+  gap: calc(var(--card-w) * 0.01);
   border: 1px solid currentColor;
-  border-radius: calc(var(--card-w) * 0.06);
-  background: repeating-linear-gradient(
-    -45deg,
-    transparent,
-    transparent calc(var(--card-w) * 0.06),
-    rgba(0, 0, 0, 0.045) calc(var(--card-w) * 0.06),
-    rgba(0, 0, 0, 0.045) calc(var(--card-w) * 0.12)
-  );
-  opacity: 0.95;
+  border-radius: calc(var(--card-w) * 0.05);
+  background: color-mix(in srgb, currentColor 8%, transparent);
+  box-shadow: inset 0 0 0 calc(var(--card-w) * 0.02) var(--card-face);
 }
 
 .card__monogram {
-  font-size: calc(var(--card-w) * 0.44);
+  font-size: calc(var(--card-w) * 0.46);
+  font-weight: 800;
   line-height: 1;
 }
 
 .card__courtSuit {
-  font-size: calc(var(--card-w) * 0.25);
+  font-size: calc(var(--card-w) * 0.24);
   line-height: 1;
 }
 
@@ -168,14 +179,15 @@
 .card--sm .card__centre--court {
   border: none;
   background: none;
+  box-shadow: none;
 }
 
 .card--joker {
-  color: #7a2ea8;
+  color: #6b21a8;
 }
 
 .card__centre--joker {
-  gap: calc(var(--card-w) * 0.03);
+  gap: calc(var(--card-w) * 0.02);
 }
 
 .card__jokerMark {
@@ -184,8 +196,9 @@
 }
 
 .card__jokerWord {
-  font-size: calc(var(--card-w) * 0.15);
-  letter-spacing: 0.08em;
+  font-size: calc(var(--card-w) * 0.14);
+  font-weight: 800;
+  letter-spacing: 0.1em;
 }
 
 .card--xs .card__jokerWord,
@@ -205,38 +218,41 @@
 }
 
 .card--button:hover:not(:disabled) {
-  transform: translateY(-4px);
+  transform: translateY(-5px);
+  box-shadow:
+    inset 0 0 0 1px rgba(15, 23, 32, 0.18),
+    0 6px 14px rgba(0, 0, 0, 0.38);
 }
 
 .card.is-selected {
   transform: translateY(-16px);
   box-shadow:
-    inset 0 0 0 1px rgba(0, 0, 0, 0.16),
-    0 0 0 3px var(--gold),
-    0 10px 16px rgba(0, 0, 0, 0.5);
+    inset 0 0 0 1px rgba(15, 23, 32, 0.18),
+    0 0 0 3px var(--accent),
+    0 10px 18px rgba(0, 0, 0, 0.45);
 }
 
 .card.is-wild::after {
   content: "";
   position: absolute;
-  inset: calc(var(--card-w) * 0.045);
-  border: 2px dashed rgba(232, 196, 106, 0.95);
-  border-radius: calc(var(--card-w) * 0.08);
+  inset: calc(var(--card-w) * 0.04);
+  border: 2px dashed var(--accent);
+  border-radius: calc(var(--card-w) * 0.07);
   pointer-events: none;
 }
 
 .card.is-new {
   box-shadow:
-    inset 0 0 0 1px rgba(0, 0, 0, 0.16),
+    inset 0 0 0 1px rgba(15, 23, 32, 0.18),
     0 0 0 2px var(--good),
-    0 4px 10px rgba(0, 0, 0, 0.3);
+    0 3px 8px rgba(0, 0, 0, 0.25);
 }
 
 .card.is-new.is-selected {
   box-shadow:
-    0 0 0 3px var(--gold),
+    0 0 0 3px var(--accent),
     0 0 0 5px var(--good),
-    0 10px 16px rgba(0, 0, 0, 0.5);
+    0 10px 18px rgba(0, 0, 0, 0.45);
 }
 
 .card__wild,
@@ -247,19 +263,18 @@
 }
 
 .card__wild {
-  right: calc(var(--card-w) * 0.05);
-  top: calc(var(--card-w) * 0.05);
+  right: calc(var(--card-w) * 0.04);
+  top: calc(var(--card-w) * 0.04);
   padding: 0 calc(var(--card-w) * 0.06);
-  border-radius: calc(var(--card-w) * 0.06);
-  background: var(--gold);
-  color: #24200f;
-  font-size: calc(var(--card-w) * 0.19);
-  font-family: system-ui, sans-serif;
+  border-radius: calc(var(--card-w) * 0.05);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: calc(var(--card-w) * 0.18);
 }
 
 .card__new {
   left: calc(var(--card-w) * 0.06);
-  bottom: calc(var(--card-w) * 0.05);
+  bottom: calc(var(--card-w) * 0.04);
   color: var(--good);
   font-size: calc(var(--card-w) * 0.2);
 }
@@ -267,14 +282,12 @@
 .card__representing {
   position: absolute;
   left: 50%;
-  bottom: calc(var(--card-w) * -0.02);
+  bottom: 0;
   z-index: 2;
   padding: 0 calc(var(--card-w) * 0.08);
-  border-radius: calc(var(--card-w) * 0.06);
-  background: var(--felt-deep);
-  border: 1px solid var(--gold);
-  color: var(--gold);
-  font-family: system-ui, sans-serif;
+  border-radius: calc(var(--card-w) * 0.05) calc(var(--card-w) * 0.05) 0 0;
+  background: var(--accent);
+  color: var(--accent-ink);
   font-size: calc(var(--card-w) * 0.17);
   transform: translateX(-50%);
   white-space: nowrap;
@@ -282,33 +295,47 @@
 
 /* ---- backs and empty slots ---- */
 
+/*
+ * The classic diamond lattice, drawn with two crossed repeating gradients and
+ * a white rule inset from the edge. It takes its colours from the theme, so
+ * the stock always matches the table it is sitting on.
+ */
 .card--back {
   display: flex;
   align-items: center;
   justify-content: center;
-  background:
-    repeating-linear-gradient(45deg, #163a63 0 6px, #1d4a7d 6px 12px);
+  background-color: var(--card-back-a);
+  background-image:
+    repeating-linear-gradient(
+      45deg,
+      transparent 0 calc(var(--card-w) * 0.055),
+      var(--card-back-b) calc(var(--card-w) * 0.055) calc(var(--card-w) * 0.11)
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      transparent 0 calc(var(--card-w) * 0.055),
+      var(--card-back-b) calc(var(--card-w) * 0.055) calc(var(--card-w) * 0.11)
+    );
   color: #fff;
-  font-family: system-ui, sans-serif;
 }
 
 .card__backPattern {
   position: absolute;
-  inset: calc(var(--card-w) * 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  border-radius: calc(var(--card-w) * 0.07);
+  inset: calc(var(--card-w) * 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: calc(var(--card-w) * 0.06);
 }
 
 .card__count {
   position: relative;
   padding: 0.1rem 0.4rem;
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.55);
-  font-size: calc(var(--card-w) * 0.24);
+  background: rgba(0, 0, 0, 0.6);
+  font-size: calc(var(--card-w) * 0.22);
   font-weight: 700;
 }
 
 .card--empty {
-  background: rgba(255, 255, 255, 0.05);
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
   box-shadow: inset 0 0 0 1px var(--line);
 }

@@ -16,7 +16,7 @@ Open site → Create room → Share code → Friends join → Sit in teams → S
 ```bash
 npm install
 npm run build
-npm test          # 142 tests: engine, server and web client
+npm test          # 153 tests: engine, server and web client
 npm start         # http://localhost:8787
 ```
 
@@ -134,7 +134,7 @@ behaviour.
 npm run lint          # ESLint: bugs, not style
 npm run test:engine   # 75 deterministic rule tests, no I/O
 npm run test:server   # 27 tests against a real server process
-npm run test:web      # 40 client tests (Vitest, jsdom)
+npm run test:web      # 51 client tests (Vitest, jsdom)
 ```
 
 The lint rules are chosen to catch what review misses rather than to argue
@@ -180,6 +180,20 @@ against the shared protocol, and the whole client/server contract is exercised
 headlessly, but no Playwright/Cypress suite drives the actual rendered interface,
 and the interface has not been played by hand on a phone. That is the main gap
 before calling the MVP done.
+
+## Theming
+
+Every colour in the app comes from one token contract, defined per theme in
+`apps/web/src/styles/themes.css` and applied by setting `data-theme` on the
+document. Adding a theme means adding a block there and an entry in
+`ui/theme.ts` — no component changes. A test asserts each theme defines the
+complete contract, because a theme missing one token silently inherits it from
+the default and shows a single colour from the wrong palette.
+
+Two things are deliberately outside the themes. Team colours stay red and blue
+everywhere, because they identify people rather than decorate the page. Card
+faces stay white, because a playing card is white in every room and tinting it
+only makes the pips harder to read.
 
 ## Configuration
 

@@ -1,4 +1,5 @@
 /* Bukharo styles, split by concern (§73/§74: mobile-first and accessible). */
+@import './themes.css';
 @import './base.css';
 @import './controls.css';
 @import './cards.css';

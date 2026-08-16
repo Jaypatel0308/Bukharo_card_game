@@ -1,30 +1,7 @@
 /* Design tokens, resets and typography. */
 
 :root {
-  --felt-deep: #0b1f18;
-  --felt: #123529;
-  --felt-light: #17422f;
-  --ink: #f2f6f3;
-  --ink-dim: #a9c0b4;
-  --line: rgba(255, 255, 255, 0.14);
-  --gold: #e8c46a;
-
-  /* Teams read as red and blue. Both stay distinguishable under the common
-     forms of colour blindness, and neither is ever the only signal: names and
-     initials carry the same information. */
-  --team-a: #ef4d5a;
-  --team-a-soft: rgba(239, 77, 90, 0.18);
-  --team-b: #4d94ef;
-  --team-b-soft: rgba(77, 148, 239, 0.18);
-
-  --danger: #ff7a70;
-  --good: #7fd6a0;
-
-  --card-face: #fbfaf5;
-  --card-face-edge: #e7e3d6;
-  --card-red: #c8102e;
-  --card-black: #1b2530;
-
+  /* Non-colour tokens. Every colour lives in themes.css. */
   --radius: 12px;
   --tap: 44px;
   color-scheme: dark;
@@ -42,7 +19,7 @@ body {
 }
 
 body {
-  background: radial-gradient(circle at 50% 0%, var(--felt-light), var(--felt-deep) 70%);
+  background: radial-gradient(circle at 50% -10%, var(--surface-raised), var(--surface-deep) 72%);
   color: var(--ink);
   font-family: ui-rounded, "SF Pro Rounded", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   font-size: 16px;
@@ -76,7 +53,7 @@ h3 {
 }
 
 :focus-visible {
-  outline: 3px solid var(--gold);
+  outline: 3px solid var(--accent);
   outline-offset: 2px;
 }
 
@@ -109,8 +86,8 @@ h3 {
 
 .connbar {
   padding: 0.4rem 1rem;
-  background: var(--gold);
-  color: #24200f;
+  background: var(--accent);
+  color: var(--accent-ink);
   font-size: 0.85rem;
   font-weight: 700;
   text-align: center;

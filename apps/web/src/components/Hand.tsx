@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import type { Card, NaturalRank } from '@bukharo/game-engine';
 
 import { PlayingCard } from './PlayingCard';
-import { compareCards, sortHand, type SortMode } from '../ui/cards';
+import { sortHand, type SortMode } from '../ui/cards';
+import { pickedUpThisTurn, planHandOrder, reorderForDrag } from '../ui/handOrder';
 
 interface Props {
   cards: Card[];
@@ -29,51 +30,21 @@ export function Hand({ cards, wildRank, selectedIds, onToggle, disabled = false 
   const drag = useRef<{ id: string; startX: number; moved: boolean } | null>(null);
   const suppressClick = useRef(false);
 
-  // Cards arriving from a draw or from taking the discard pile are put where
-  // they belong rather than dumped at the end. A hand the player has not
-  // rearranged by hand simply stays sorted; once they have dragged cards about,
-  // their arrangement is preserved and new cards slot into it.
+  // Ordering and highlight rules live in ../ui/handOrder so they can be tested
+  // without a DOM; this effect only feeds them the latest hand.
   useEffect(() => {
     const ids = cards.map((c) => c.id);
     const previous = previousIds.current;
     previousIds.current = new Set(ids);
 
-    // A card is "just picked up" only when it joins a hand that already had
-    // cards. A wholesale replacement is a fresh deal, a new round, the Bucharoo
-    // or a reconnect — highlighting all thirteen would be noise.
-    const arrivals = cards.filter((c) => !previous.has(c.id));
-    if (arrivals.length > 0) {
-      setJustPickedUp(arrivals.length === cards.length ? [] : arrivals.map((c) => c.id));
-    }
+    const arrivals = pickedUpThisTurn(cards, previous);
+    if (arrivals.length > 0) setJustPickedUp(arrivals);
 
-    setOrder((current) => {
-      const present = new Set(ids);
-      const kept = current.filter((id) => present.has(id));
-
-      if (!manualOrder) return sortHand(cards, sortMode).map((c) => c.id);
-
-      const known = new Set(kept);
-      const arrived = sortHand(
-        cards.filter((c) => !known.has(c.id)),
-        sortMode,
-      );
-      if (arrived.length === 0) return kept;
-
-      const compare = compareCards(sortMode);
-      const byId = new Map(cards.map((c) => [c.id, c]));
-      const next = [...kept];
-      for (const card of arrived) {
-        const at = next.findIndex((id) => {
-          const existing = byId.get(id);
-          return existing ? compare(card, existing) < 0 : false;
-        });
-        if (at === -1) next.push(card.id);
-        else next.splice(at, 0, card.id);
-      }
-      return next;
-      // sortMode is deliberately not a dependency: changing it is an explicit
-      // action handled by applySort, not something a re-render should trigger.
-    });
+    setOrder((current) =>
+      planHandOrder({ cards, previousOrder: current, manualOrder, sortMode }),
+    );
+    // sortMode is deliberately not a dependency: changing it is an explicit
+    // action handled by applySort, not something a re-render should trigger.
   }, [cards, manualOrder]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // The highlight answers "what did I just pick up?", so it lives exactly as
@@ -121,14 +92,7 @@ export function Hand({ cards, wildRank, selectedIds, onToggle, disabled = false 
     if (from === -1 || from === target) return;
 
     setManualOrder(true);
-    setOrder((current) => {
-      const at = current.indexOf(state.id);
-      if (at === -1 || at === target) return current;
-      const next = [...current];
-      next.splice(at, 1);
-      next.splice(target, 0, state.id);
-      return next;
-    });
+    setOrder((current) => reorderForDrag(current, state.id, target));
   };
 
   const endDrag = (): void => {

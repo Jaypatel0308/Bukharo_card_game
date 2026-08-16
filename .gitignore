@@ -1,0 +1,18 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+*.tsbuildinfo
+
+# Persisted game state (rooms, hands, session hashes)
+data/
+
+# Local tooling and secrets
+.claude/settings.local.json
+.env
+.env.local
+*.log
+
+# OS noise
+.DS_Store

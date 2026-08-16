@@ -1,0 +1,27 @@
+{
+  "name": "bukharo",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Bukharo \u2014 real-time 4-player team Rummy/Canasta web app",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "npm run build -w @bukharo/game-engine && npm run build -w @bukharo/shared && npm run build -w @bukharo/server && npm run build -w @bukharo/web",
+    "test": "npm run test -w @bukharo/game-engine && npm run test -w @bukharo/server",
+    "dev": "npm run dev -w @bukharo/server & npm run dev -w @bukharo/web",
+    "dev:server": "npm run dev -w @bukharo/server",
+    "dev:web": "npm run dev -w @bukharo/web",
+    "start": "npm run start -w @bukharo/server",
+    "typecheck": "tsc -b packages/game-engine packages/shared apps/server",
+    "test:engine": "npm run test -w @bukharo/game-engine",
+    "test:server": "npm run test -w @bukharo/server"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

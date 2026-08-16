@@ -362,7 +362,11 @@ const sweeper = setInterval(() => {
 }, config.sweepIntervalMs);
 
 server.listen(config.port, config.host, () => {
-  console.log(`[bukharo] listening on http://${config.host}:${config.port}`);
+  // Report the port actually bound, not the one requested: PORT=0 asks the OS
+  // for any free port, which is how the tests avoid fighting over a fixed one.
+  const address = server.address();
+  const boundPort = address && typeof address === 'object' ? address.port : config.port;
+  console.log(`[bukharo] listening on http://${config.host}:${boundPort}`);
   console.log(`[bukharo] game state directory: ${config.dataDir}`);
 });
 

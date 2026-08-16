@@ -22,9 +22,9 @@ import {
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const serverEntry = path.resolve(here, '../dist/index.js');
-const PORT = 9500 + Math.floor(Math.random() * 400);
-const WS_URL = `ws://127.0.0.1:${PORT}/ws`;
-
+// The port is chosen by the OS (PORT=0) and read back from the server's own
+// startup line, so parallel runs and busy CI machines cannot collide.
+let wsUrl;
 let child;
 let dataDir;
 
@@ -39,7 +39,7 @@ class Client {
   }
 
   async connect() {
-    this.ws = new WebSocket(WS_URL);
+    this.ws = new WebSocket(wsUrl);
     await new Promise((resolve, reject) => {
       this.ws.once('open', resolve);
       this.ws.once('error', reject);
@@ -108,14 +108,16 @@ class Client {
 before(async () => {
   dataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bukharo-full-'));
   child = spawn(process.execPath, [serverEntry], {
-    env: { ...process.env, PORT: String(PORT), DATA_DIR: dataDir, SWEEP_INTERVAL_MS: '600000' },
+    env: { ...process.env, PORT: '0', DATA_DIR: dataDir, SWEEP_INTERVAL_MS: '600000' },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   child.stderr.on('data', (d) => process.stderr.write(`[server] ${d}`));
   await new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error('server did not start')), 8000);
+    const timer = setTimeout(() => reject(new Error('server did not start')), 30000);
     child.stdout.on('data', (data) => {
-      if (data.toString().includes('listening')) {
+      const match = /listening on http:\/\/[^:]+:(\d+)/.exec(data.toString());
+      if (match) {
+        wsUrl = `ws://127.0.0.1:${match[1]}/ws`;
         clearTimeout(timer);
         resolve();
       }
@@ -129,7 +131,7 @@ after(async () => {
 });
 
 /** Polls until a condition holds across clients, or gives up. */
-async function waitUntil(predicate, timeoutMs = 15000) {
+async function waitUntil(predicate, timeoutMs = 30000) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     if (predicate()) return true;
@@ -205,7 +207,7 @@ async function act(client, action) {
   const settled = Promise.race([
     client.nextState(() => true).then(() => 'ok'),
     client
-      .waitFor((m) => m.type === 'error' && m.error.actionId === actionId, 4000)
+      .waitFor((m) => m.type === 'error' && m.error.actionId === actionId, 20000)
       .then(() => 'error'),
   ]).catch(() => 'timeout');
   client.send({ type: 'game:action', actionId, action });

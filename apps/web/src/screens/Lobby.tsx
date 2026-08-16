@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Seat } from '@bukharo/shared';
 import { TARGET_SCORE_OPTIONS } from '@bukharo/shared';
 
+import { ThemePicker } from '../components/ThemePicker';
 import type { Bukharo } from '../state/useBukharo';
 import { SEAT_LABEL } from '../ui/cards';
 
@@ -149,6 +150,11 @@ export function Lobby({ app }: { app: Bukharo }) {
           </div>
         </div>
       )}
+
+      <div className="panel">
+        <h2 className="panel__title">Table theme</h2>
+        <ThemePicker />
+      </div>
 
       <div className="lobby__actions">
         <button

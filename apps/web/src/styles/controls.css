@@ -27,13 +27,13 @@
 }
 
 .button--primary {
-  background: var(--gold);
-  border-color: var(--gold);
-  color: #24200f;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
 }
 
 .button--primary:hover:not(:disabled) {
-  background: #f2d488;
+  background: color-mix(in srgb, var(--accent) 82%, white);
 }
 
 .button--ghost {
@@ -81,7 +81,7 @@
 
 .chip.is-active {
   background: rgba(232, 196, 106, 0.2);
-  border-color: var(--gold);
+  border-color: var(--accent);
   color: var(--ink);
 }
 
@@ -141,7 +141,7 @@
 
 .segmented__item.is-active {
   background: rgba(232, 196, 106, 0.18);
-  border-color: var(--gold);
+  border-color: var(--accent);
   color: var(--ink);
 }
 
@@ -180,8 +180,8 @@
 }
 
 .tag--warn {
-  background: rgba(255, 171, 94, 0.22);
-  color: #ffc48a;
+  background: color-mix(in srgb, var(--warn) 22%, transparent);
+  color: var(--warn);
 }
 
 .tag--good {
@@ -232,4 +232,41 @@
 
 .pip--team_b {
   background: var(--team-b);
+}
+
+/* ---- theme picker ---- */
+
+.themePicker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.themeSwatch {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: var(--tap);
+  padding: 0.35rem 0.7rem 0.35rem 0.4rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-dim);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.themeSwatch.is-active {
+  border-color: var(--accent);
+  color: var(--ink);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.themeSwatch__colours {
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 1px solid var(--line);
+  border-radius: 50%;
 }

@@ -9,7 +9,7 @@
   margin: 0;
   font-size: clamp(2.5rem, 12vw, 3.5rem);
   letter-spacing: 0.02em;
-  color: var(--gold);
+  color: var(--accent);
 }
 
 .home__tagline {
@@ -59,7 +59,7 @@
   font-size: clamp(2.4rem, 14vw, 3.2rem);
   font-weight: 800;
   letter-spacing: 0.22em;
-  color: var(--gold);
+  color: var(--accent);
 }
 
 .seats {

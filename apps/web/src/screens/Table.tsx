@@ -46,6 +46,11 @@ export function Table({ app }: { app: Bukharo }) {
   const minimumMeld = teamOpened ? room.rules.normalMeldMinimum : room.rules.openingRunMinimum;
   const seats = useMemo(() => arrange(game, you?.seat ?? null), [game, you?.seat]);
 
+  // Your team sits on your side of the table, the opponents across from you.
+  // A spectator has no side, so Team A is treated as the near one.
+  const yourTeam: TeamId = you?.teamId ?? 'TEAM_A';
+  const theirTeam: TeamId = yourTeam === 'TEAM_A' ? 'TEAM_B' : 'TEAM_A';
+
   const activePlayer = game.players.find((p) => p.id === game.currentPlayerId);
   const connectedById = new Map(room.players.map((p) => [p.id, p.connected]));
   const waitingFor = room.waitingForPlayerId
@@ -109,6 +114,23 @@ export function Table({ app }: { app: Bukharo }) {
     return `Waiting for ${activePlayer?.displayName ?? 'the next player'}…`;
   };
 
+  const renderMelds = (teamId: TeamId) => (
+    <div className="meldArea">
+      <Melds
+        melds={game.melds}
+        teamId={teamId}
+        title={teamNames[teamId]}
+        isOpened={game.teams[teamId].isOpened}
+        wildRank={game.wildRank}
+        openingRunMinimum={room.rules.openingRunMinimum}
+        isYours={teamId === you?.teamId}
+        canAdd={canSelectForMeld && you?.teamId === teamId}
+        selectableMeldId={targetMeldId}
+        onSelectMeld={(id) => setTargetMeldId((current) => (current === id ? null : id))}
+      />
+    </div>
+  );
+
   return (
     <main className="screen screen--table">
       <TopBar
@@ -128,6 +150,8 @@ export function Table({ app }: { app: Bukharo }) {
       <p className={`turnbar ${isYourTurn ? 'is-yours' : ''}`} role="status" aria-live="polite">
         {turnMessage()}
       </p>
+
+      {renderMelds(theirTeam)}
 
       <div className="table">
         <OpponentSeat
@@ -156,22 +180,7 @@ export function Table({ app }: { app: Bukharo }) {
         </div>
       </div>
 
-      <div className="meldArea">
-        {(['TEAM_A', 'TEAM_B'] as TeamId[]).map((teamId) => (
-          <Melds
-            key={teamId}
-            melds={game.melds}
-            teamId={teamId}
-            title={teamNames[teamId]}
-            isOpened={game.teams[teamId].isOpened}
-            wildRank={game.wildRank}
-            openingRunMinimum={room.rules.openingRunMinimum}
-            canAdd={canSelectForMeld && you?.teamId === teamId}
-            selectableMeldId={targetMeldId}
-            onSelectMeld={(id) => setTargetMeldId((current) => (current === id ? null : id))}
-          />
-        ))}
-      </div>
+      {renderMelds(yourTeam)}
 
       {you && (
         <Hand

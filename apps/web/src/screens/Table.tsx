@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import type { GameView, Seat } from '@bukharo/game-engine';
+import { validateMeld, validateOpeningRun } from '@bukharo/game-engine';
+import type { Card, GameView, Seat } from '@bukharo/game-engine';
 
 import { CardBack, PlayingCard } from '../components/PlayingCard';
 import { Hand } from '../components/Hand';
@@ -73,9 +74,45 @@ export function Table({ app }: { app: Bukharo }) {
 
   const canDraw = isYourTurn && phase === 'AWAITING_DRAW';
   const canPlay = isYourTurn && (phase === 'PLAYING_CARDS' || phase === 'AWAITING_DISCARD');
-  const canMeld = canPlay && phase === 'PLAYING_CARDS' && selected.length >= minimumMeld;
-  const canAddToMeld = canPlay && phase === 'PLAYING_CARDS' && selected.length >= 1 && targetMeldId !== null;
+  const canSelectForMeld = canPlay && phase === 'PLAYING_CARDS';
+
+  const selectedCards = useMemo(
+    () =>
+      selected
+        .map((id) => you?.hand.find((c) => c.id === id))
+        .filter((c): c is Card => Boolean(c)),
+    [selected, you],
+  );
+
+  // The same engine the server runs, used here only to light the buttons up
+  // honestly (§92). The server still validates every move for real.
+  const meldPreview = useMemo(() => {
+    if (!canSelectForMeld || selectedCards.length === 0) return null;
+    const ctx = { wildRank: game.wildRank, rules: room.rules };
+    return teamOpened ? validateMeld(selectedCards, ctx) : validateOpeningRun(selectedCards, ctx);
+  }, [canSelectForMeld, selectedCards, teamOpened, game.wildRank, room.rules]);
+
+  const addPreview = useMemo(() => {
+    if (!canSelectForMeld || !teamOpened || selectedCards.length === 0 || !targetMeldId) return null;
+    const meld = game.melds.find((m) => m.id === targetMeldId);
+    if (!meld) return null;
+    return validateMeld(
+      [...meld.cards.map((c) => c.card), ...selectedCards],
+      { wildRank: game.wildRank, rules: room.rules },
+      meld.type,
+    );
+  }, [canSelectForMeld, teamOpened, selectedCards, targetMeldId, game.melds, game.wildRank, room.rules]);
+
+  const canMeld = meldPreview?.ok === true;
+  const canAddToMeld = addPreview?.ok === true;
   const canDiscard = canPlay && selected.length === 1;
+
+  // Explain a rejected selection, but only once enough cards are chosen to
+  // judge it — nagging about "needs 4 cards" after the first tap is noise.
+  const meldProblem =
+    selectedCards.length >= minimumMeld && meldPreview && !meldPreview.ok ? meldPreview.message : null;
+  const addProblem =
+    targetMeldId && selectedCards.length > 0 && addPreview && !addPreview.ok ? addPreview.message : null;
 
   const turnMessage = (): string => {
     if (room.status === 'ROUND_END') return 'Round over';
@@ -232,58 +269,65 @@ export function Table({ app }: { app: Bukharo }) {
         />
       )}
 
+      {/*
+        Every button keeps a fixed position and a fixed meaning, enabled or
+        disabled by the phase. Earlier the bar swapped its contents between
+        draw and play, so a button could change identity under a waiting
+        player's finger and a tap meant for "Open with 4+" drew a card.
+      */}
       <div className="actionbar">
-        {canDraw ? (
-          <>
-            <button type="button" className="button button--primary" onClick={() => submit({ type: 'DRAW_STOCK' })}>
-              Draw card
-            </button>
-            <button
-              type="button"
-              className="button"
-              disabled={game.discardPile.length === 0}
-              onClick={() => submit({ type: 'TAKE_DISCARD_PILE' })}
-            >
-              Take pile ({game.discardPile.length})
-            </button>
-            <button
-              type="button"
-              className="button"
-              disabled={game.discardPile.length === 0}
-              onClick={() => setDrawer('discard')}
-            >
-              See pile
-            </button>
-          </>
-        ) : (
-          <>
-            <button
-              type="button"
-              className="button"
-              disabled={!canMeld}
-              onClick={() => submit({ type: 'CREATE_MELD', cardIds: selected })}
-            >
-              {teamOpened ? 'Create meld' : `Open with ${minimumMeld}+`}
-            </button>
-            <button
-              type="button"
-              className="button"
-              disabled={!canAddToMeld}
-              onClick={() => submit({ type: 'ADD_TO_MELD', meldId: targetMeldId!, cardIds: selected })}
-            >
-              Add to meld
-            </button>
-            <button
-              type="button"
-              className="button button--primary"
-              disabled={!canDiscard}
-              onClick={() => submit({ type: 'DISCARD', cardId: selected[0]! })}
-            >
-              Discard
-            </button>
-          </>
-        )}
-        {!canDraw && (
+        <div className="actionbar__row">
+          <button
+            type="button"
+            className="button button--primary"
+            disabled={!canDraw}
+            onClick={() => submit({ type: 'DRAW_STOCK' })}
+          >
+            Draw card
+          </button>
+          <button
+            type="button"
+            className="button"
+            disabled={!canDraw || game.discardPile.length === 0}
+            onClick={() => submit({ type: 'TAKE_DISCARD_PILE' })}
+          >
+            Take pile ({game.discardPile.length})
+          </button>
+          <button
+            type="button"
+            className="button"
+            disabled={game.discardPile.length === 0}
+            onClick={() => setDrawer('discard')}
+          >
+            See pile
+          </button>
+        </div>
+
+        <div className="actionbar__row">
+          <button
+            type="button"
+            className="button"
+            disabled={!canMeld}
+            onClick={() => submit({ type: 'CREATE_MELD', cardIds: selected })}
+          >
+            {teamOpened ? 'Create meld' : `Open with ${minimumMeld}+`}
+          </button>
+          <button
+            type="button"
+            className="button"
+            disabled={!canAddToMeld}
+            onClick={() => submit({ type: 'ADD_TO_MELD', meldId: targetMeldId!, cardIds: selected })}
+          >
+            Add to meld
+          </button>
+          <button
+            type="button"
+            className="button button--primary"
+            disabled={!canDiscard}
+            onClick={() => submit({ type: 'DISCARD', cardId: selected[0]! })}
+          >
+            Discard
+          </button>
           <button
             type="button"
             className="button button--ghost"
@@ -292,8 +336,16 @@ export function Table({ app }: { app: Bukharo }) {
           >
             Clear
           </button>
-        )}
+        </div>
       </div>
+
+      {canDraw && (
+        <p className="hint hint--floating">
+          Start your turn by drawing a card or taking the discard pile.
+        </p>
+      )}
+      {meldProblem && <p className="hint hint--floating hint--problem">{meldProblem}</p>}
+      {addProblem && <p className="hint hint--floating hint--problem">{addProblem}</p>}
 
       {canPlay && !teamOpened && (
         <p className="hint hint--floating">
@@ -301,7 +353,6 @@ export function Table({ app }: { app: Bukharo }) {
           no wilds — before anything else.
         </p>
       )}
-      {canAddToMeld && <p className="hint hint--floating">Adding {selected.length} card(s) to the selected meld.</p>}
 
       {drawer === 'discard' && (
         <DiscardPileView

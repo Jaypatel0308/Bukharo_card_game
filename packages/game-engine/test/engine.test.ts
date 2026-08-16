@@ -382,7 +382,62 @@ describe('Bucharoo (§25)', () => {
     assert.equal(discarded.state.bucharoo.length, 0);
     assert.equal(discarded.state.teams.TEAM_A.tookBucharoo, true);
     assert.equal(discarded.state.status, 'PLAYING');
-    // The round did not end: the player picked the Bucharoo up instead.
+    // The round did not end: the player picked the Bucharoo up instead, and
+    // keeps the turn to play it.
+    assert.equal(discarded.state.currentPlayerId, 'p1');
+  });
+
+  it('keeps the turn with the player who collected it', () => {
+    const game = newGame();
+    const run = [card('4', 'spades'), card('5', 'spades'), card('6', 'spades'), card('7', 'spades')];
+    const state = playing(game, 'p1', [...run, card('2', 'clubs')], { wildRank: 'K' });
+
+    const opened = applyAction(state, { type: 'CREATE_MELD', playerId: 'p1', cardIds: ids(run) }, rules());
+    assert.equal(opened.ok, true);
+    if (!opened.ok) return;
+
+    const discarded = applyAction(
+      opened.state,
+      { type: 'DISCARD', playerId: 'p1', cardId: card('2', 'clubs').id },
+      rules(),
+    );
+    assert.equal(discarded.ok, true);
+    if (!discarded.ok) return;
+
+    // The Bucharoo was collected, so play does not pass on: the same player
+    // continues with the new hand and will end the turn with another discard.
+    assert.equal(discarded.state.currentPlayerId, 'p1');
+    assert.equal(discarded.state.turnPhase, 'PLAYING_CARDS');
+    assert.equal(discarded.state.hasDrawnThisTurn, true);
+    assert.equal(discarded.state.players.find((p) => p.id === 'p1')!.hand.length, 13);
+
+    // And that second discard does pass the turn on.
+    const hand = discarded.state.players.find((p) => p.id === 'p1')!.hand;
+    const second = applyAction(
+      discarded.state,
+      { type: 'DISCARD', playerId: 'p1', cardId: hand[0]!.id },
+      rules(),
+    );
+    assert.equal(second.ok, true);
+    if (!second.ok) return;
+    assert.notEqual(second.state.currentPlayerId, 'p1');
+  });
+
+  it('passes the turn on instead when the house rule says so', () => {
+    const houseRules = rules({ bucharooPickupContinuesTurn: false });
+    const game = newGame();
+    const run = [card('4', 'spades'), card('5', 'spades'), card('6', 'spades'), card('7', 'spades')];
+    const state = playing(game, 'p1', [...run, card('2', 'clubs')], { wildRank: 'K' });
+    const opened = applyAction(state, { type: 'CREATE_MELD', playerId: 'p1', cardIds: ids(run) }, houseRules);
+    assert.equal(opened.ok, true);
+    if (!opened.ok) return;
+    const discarded = applyAction(
+      opened.state,
+      { type: 'DISCARD', playerId: 'p1', cardId: card('2', 'clubs').id },
+      houseRules,
+    );
+    assert.equal(discarded.ok, true);
+    if (!discarded.ok) return;
     assert.notEqual(discarded.state.currentPlayerId, 'p1');
   });
 

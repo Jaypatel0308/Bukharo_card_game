@@ -50,6 +50,12 @@ export interface RuleConfig {
   requireBucharoBeforeGoingOut: boolean;
   /** IMMEDIATE = pick the Bucharoo up and keep playing the same turn. UNCONFIRMED (§99.10). */
   bucharooPickupTiming: 'IMMEDIATE' | 'NEXT_TURN';
+  /**
+   * Collecting the Bucharoo by discarding the last card does not end the turn:
+   * the player picks the thirteen cards up and carries on playing, finishing
+   * the turn with a further discard from the new hand.
+   */
+  bucharooPickupContinuesTurn: boolean;
 
   /* Wilds */
   jokersAreWild: boolean;
@@ -113,6 +119,7 @@ export const DEFAULT_RULES: RuleConfig = {
   bucharooMustBeTakenBeforeGoingOut: true,
   requireBucharoBeforeGoingOut: false,
   bucharooPickupTiming: 'IMMEDIATE',
+  bucharooPickupContinuesTurn: true,
 
   jokersAreWild: true,
   roundWildEnabled: true,

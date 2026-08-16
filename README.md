@@ -1,5 +1,7 @@
 # Bukharo
 
+[![CI](https://github.com/Jaypatel0308/Bukharo_card_game/actions/workflows/ci.yml/badge.svg)](https://github.com/Jaypatel0308/Bukharo_card_game/actions/workflows/ci.yml)
+
 A real-time, four-player, team-based Rummy/Canasta web app. One player creates a
 private room, shares a five-character code, and four friends play from their
 phones. The server enforces every rule, keeps each hand private, scores each
@@ -14,7 +16,7 @@ Open site → Create room → Share code → Friends join → Sit in teams → S
 ```bash
 npm install
 npm run build
-npm test          # 73 engine tests + 11 websocket tests
+npm test          # 75 engine tests + 11 websocket tests
 npm start         # http://localhost:8787
 ```
 
@@ -129,9 +131,13 @@ behaviour.
 ## Testing
 
 ```bash
-npm run test:engine   # 73 deterministic rule tests, no I/O
+npm run test:engine   # 75 deterministic rule tests, no I/O
 npm run test:server   # 11 tests over real websockets against a real server
 ```
+
+Every pull request runs both suites and a full build in GitHub Actions
+(`.github/workflows/ci.yml`). Render deploys off `main`, so that check is the
+last gate before a change reaches the table.
 
 The engine suite covers each rule from the brief's test list plus a
 random-legal-move simulation that asserts, after every single action, that all

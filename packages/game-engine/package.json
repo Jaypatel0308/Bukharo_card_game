@@ -13,7 +13,7 @@
   },
   "scripts": {
     "build": "tsc -b",
-    "test": "tsc -b && node --test \"dist/test/*.test.js\"",
+    "test": "tsc -b --force && node --test \"dist/test/*.test.js\"",
     "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },
   "devDependencies": {

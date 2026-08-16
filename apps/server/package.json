@@ -9,7 +9,7 @@
     "dev": "tsc -b --watch --preserveWatchOutput & node --watch dist/index.js",
     "start": "node dist/index.js",
     "clean": "rm -rf dist tsconfig.tsbuildinfo",
-    "test": "npm run build && node --test --test-concurrency=1 \"test/*.test.mjs\""
+    "test": "tsc -b --force && node --test --test-concurrency=1 \"test/*.test.mjs\""
   },
   "dependencies": {
     "@bukharo/game-engine": "*",

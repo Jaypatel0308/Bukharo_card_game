@@ -139,6 +139,11 @@ Every pull request runs both suites and a full build in GitHub Actions
 (`.github/workflows/ci.yml`). Render deploys off `main`, so that check is the
 last gate before a change reaches the table.
 
+The test scripts compile with `tsc -b --force` rather than relying on
+incremental state. `tsc -b` decides what to rebuild from file timestamps, and
+switching branches can leave a compiled test newer than the source it came
+from — which silently runs yesterday's tests against today's code.
+
 The engine suite covers each rule from the brief's test list plus a
 random-legal-move simulation that asserts, after every single action, that all
 108 cards are still accounted for exactly once and that no hidden card has

@@ -321,13 +321,21 @@
   cursor: pointer;
 }
 
+.meld--selectable {
+  transition: transform 0.14s ease, box-shadow 0.14s ease, background 0.14s ease;
+}
+
 .meld--selectable:hover {
   background: color-mix(in srgb, var(--ink) 10%, transparent);
 }
 
+/* Lifted, not merely outlined: on a phone a thin ring around a compressed fan
+   is easy to miss, and this is the meld your cards are about to go into. */
 .meld.is-selected {
   border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  box-shadow: 0 0 0 2px var(--accent), 0 6px 14px rgba(0, 0, 0, 0.4);
+  transform: translateY(-4px);
 }
 
 /*
@@ -342,7 +350,18 @@
 }
 
 .meld__fan .card + .card {
-  margin-left: calc(var(--card-w) * -0.58);
+  margin-left: calc(var(--card-w) * -1 * var(--fan-overlap, 0.58));
+}
+
+/* The sliver has to carry the index, and "10" is the widest one, so inside a
+   fan the index is set a little smaller and tighter to the edge. */
+.meld__fan .card__rank {
+  font-size: calc(var(--card-w) * 0.3);
+  letter-spacing: -0.06em;
+}
+
+.meld__fan .card__index--tl {
+  left: calc(var(--card-pad) * 0.8);
 }
 
 /* A wild's stand-in value would be hidden under the next card, so inside a fan

@@ -192,7 +192,7 @@ export function startRound(state: GameState, rules: RuleConfig, rng: Rng): GameS
   draft.roundNumber += 1;
   draft.status = 'DEALING';
 
-  let deck = shuffle(createDeck(), rng);
+  const deck = shuffle(createDeck(), rng);
 
   for (const player of draft.players) {
     player.hand = [];

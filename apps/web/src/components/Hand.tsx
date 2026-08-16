@@ -43,8 +43,11 @@ export function Hand({ cards, wildRank, selectedIds, onToggle, disabled = false 
     setOrder((current) =>
       planHandOrder({ cards, previousOrder: current, manualOrder, sortMode }),
     );
-    // sortMode is deliberately not a dependency: changing it is an explicit
-    // action handled by applySort, not something a re-render should trigger.
+    // sortMode is deliberately not a dependency. Changing the sort is an
+    // explicit action, handled by applySort, which reorders the hand itself;
+    // this effect only reacts to the hand changing. The value read here is
+    // never stale, because the dependency array controls when the effect runs,
+    // not which render's closure it sees.
   }, [cards, manualOrder]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // The highlight answers "what did I just pick up?", so it lives exactly as

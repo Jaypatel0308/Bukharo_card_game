@@ -131,10 +131,19 @@ behaviour.
 ## Testing
 
 ```bash
+npm run lint          # ESLint: bugs, not style
 npm run test:engine   # 75 deterministic rule tests, no I/O
 npm run test:server   # 27 tests against a real server process
 npm run test:web      # 40 client tests (Vitest, jsdom)
 ```
+
+The lint rules are chosen to catch what review misses rather than to argue
+about formatting: there are no stylistic rules and no formatter. The one that
+earns its place most is `react-hooks/exhaustive-deps` — a wrong dependency
+array is a stale closure, and a stale closure in this client means cards that
+do not move. Warnings fail the build alongside errors, and an
+`eslint-disable` that no longer suppresses anything is itself an error, so
+suppressions cannot quietly outlive their reason.
 
 Every pull request runs both suites and a full build in GitHub Actions
 (`.github/workflows/ci.yml`). Render deploys off `main`, so that check is the

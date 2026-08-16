@@ -155,7 +155,7 @@ describe('team opening (§12/§15)', () => {
   it('opens the whole team and lets the partner play afterwards', () => {
     const game = newGame();
     const opening = [card('4', 'hearts'), card('5', 'hearts'), card('6', 'hearts'), card('7', 'hearts')];
-    let state = playing(game, 'p1', [...opening, card('2', 'clubs')], { wildRank: 'K' });
+    const state = playing(game, 'p1', [...opening, card('2', 'clubs')], { wildRank: 'K' });
 
     const opened = applyAction(state, { type: 'CREATE_MELD', playerId: 'p1', cardIds: ids(opening) }, rules());
     assert.equal(opened.ok, true);

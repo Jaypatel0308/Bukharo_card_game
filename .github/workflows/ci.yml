@@ -30,10 +30,15 @@ jobs:
       # dependencies and there is nothing to build without them.
       - run: npm ci --include=dev
 
+      # Bugs rather than style: hook dependencies, unused bindings, missing
+      # accessibility attributes. Warnings fail too, so suppressions stay
+      # deliberate instead of accumulating.
+      - run: npm run lint
+
       # Compiles the engine, the shared protocol, the server and the web
       # client, so a type error anywhere fails the build.
       - run: npm run build
 
-      # 75 deterministic engine tests, then 11 over real websockets against a
-      # real server process.
+      # 142 tests: the deterministic engine suite, the server suite against a
+      # real process, and the client suite in jsdom.
       - run: npm test

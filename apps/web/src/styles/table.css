@@ -1,0 +1,463 @@
+/* The game table: top bar, seats, centre piles, melds, hand and actions. */
+
+.screen--table {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding-bottom: 1rem;
+  max-width: 900px;
+}
+
+/* ---- top bar ---- */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0.2rem;
+}
+
+.topbar__scores {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  font-size: 0.85rem;
+}
+
+.topbar__team {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.topbar__teamName {
+  overflow: hidden;
+  max-width: 5.5rem;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--ink-dim);
+}
+
+.topbar__teamScore {
+  font-variant-numeric: tabular-nums;
+}
+
+.topbar__team--team_a .topbar__teamScore {
+  color: var(--team-a);
+}
+
+.topbar__team--team_b .topbar__teamScore {
+  color: var(--team-b);
+}
+
+.topbar__round {
+  color: var(--ink-dim);
+  white-space: nowrap;
+}
+
+/* The Bucharoo now lives up here, where the wild indicator used to be. */
+.topbar__bucharoo {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.1;
+}
+
+.topbar__label {
+  color: var(--ink-dim);
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.topbar__bucharooState {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--gold);
+}
+
+.topbar__bucharooState.is-taken {
+  color: var(--ink-dim);
+}
+
+.topbar__buttons {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.turnbar {
+  margin: 0;
+  padding: 0.5rem 0.8rem;
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.turnbar.is-yours {
+  background: rgba(232, 196, 106, 0.2);
+  border: 1px solid var(--gold);
+  color: var(--gold);
+}
+
+/* ---- seats ---- */
+
+.table {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.table__middle {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.opponent {
+  padding: 0.45rem 0.55rem;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(0, 0, 0, 0.25);
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.opponent--team_a {
+  border-left-color: var(--team-a);
+}
+
+.opponent--team_b {
+  border-left-color: var(--team-b);
+}
+
+.opponent--top {
+  justify-self: center;
+  min-width: 9rem;
+}
+
+.opponent.is-active {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px var(--gold);
+}
+
+.opponent.is-empty {
+  visibility: hidden;
+}
+
+.opponent__name {
+  display: block;
+  font-weight: 700;
+}
+
+.opponent__meta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  color: var(--ink-dim);
+}
+
+.opponent__seat {
+  display: block;
+  color: var(--ink-dim);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+}
+
+.opponent__turn {
+  display: block;
+  width: 100%;
+  height: 3px;
+  margin-top: 0.3rem;
+  border-radius: 2px;
+  background: var(--gold);
+}
+
+/* ---- centre piles: wild, stock, discard ---- */
+
+.pileArea {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.7rem;
+  padding: 0.6rem 0.5rem;
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.2);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.pile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.pile--button {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.pile--button:hover .card,
+.pile--button:focus-visible .card {
+  transform: translateY(-3px);
+}
+
+.pile__label {
+  color: var(--ink-dim);
+  font-size: 0.66rem;
+  text-align: center;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* The wild card sits under a gold frame so the round's rank is unmissable. */
+.pile--wild .card {
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.16),
+    0 0 0 2px var(--gold),
+    0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+.pile__wildRank {
+  color: var(--gold);
+  font-weight: 800;
+}
+
+/* ---- melds ---- */
+
+.meldArea {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.melds {
+  padding: 0.6rem;
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.melds--team_a {
+  border-top-color: var(--team-a);
+}
+
+.melds--team_b {
+  border-top-color: var(--team-b);
+}
+
+.melds__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.melds__header h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.melds__empty {
+  margin: 0.4rem 0 0;
+  color: var(--ink-dim);
+  font-size: 0.8rem;
+}
+
+.melds__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+
+.meld {
+  display: block;
+  width: 100%;
+  padding: 0.4rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+.meld--selectable {
+  cursor: pointer;
+}
+
+.meld.is-selected {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 2px var(--gold);
+}
+
+.meld__cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  padding-top: 0.5rem;
+}
+
+.meld__meta {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+  color: var(--ink-dim);
+  font-size: 0.72rem;
+}
+
+.ribbon {
+  padding: 0.12rem 0.45rem;
+  border-radius: 4px;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.ribbon--clean {
+  background: var(--good);
+  color: #08281a;
+}
+
+.ribbon--dirty {
+  background: var(--gold);
+  color: #2c2408;
+}
+
+/* ---- hand ---- */
+
+.hand {
+  padding: 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.hand__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.hand__count {
+  color: var(--ink-dim);
+  font-size: 0.8rem;
+}
+
+.hand__new {
+  color: var(--good);
+  font-weight: 600;
+}
+
+.hand__sorts {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.hand__cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  padding-top: 18px;
+  touch-action: pan-y;
+}
+
+.hand__slot {
+  transition: transform 0.12s ease;
+}
+
+.hand__slot.is-dragging {
+  opacity: 0.6;
+  transform: scale(1.06);
+}
+
+.hand__empty {
+  margin: 0;
+  color: var(--ink-dim);
+}
+
+/* ---- action bar ---- */
+
+.actionbar {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.5rem 0;
+  background: linear-gradient(to top, var(--felt-deep) 78%, transparent);
+}
+
+.actionbar__row {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.actionbar .button {
+  flex: 1;
+  min-width: 0;
+  padding: 0.6rem 0.3rem;
+  font-size: 0.85rem;
+}
+
+.hint--floating {
+  margin: 0;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(232, 196, 106, 0.1);
+}
+
+.hint--problem {
+  border-color: var(--danger);
+  background: rgba(255, 122, 112, 0.12);
+  color: #ffdedb;
+}
+
+@media (min-width: 720px) {
+  .meldArea {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .opponent {
+    font-size: 0.9rem;
+  }
+}
+
+.meld__type {
+  font-weight: 600;
+}
+
+.meld__tag {
+  padding: 0.05rem 0.35rem;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font-size: 0.66rem;
+}
+
+.opponent__cards {
+  font-variant-numeric: tabular-nums;
+}

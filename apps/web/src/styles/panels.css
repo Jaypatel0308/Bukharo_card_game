@@ -1,0 +1,373 @@
+/* Drawers, modals, the inspector sheet, toasts and score tables. */
+
+.drawer,
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(4, 12, 9, 0.75);
+  backdrop-filter: blur(3px);
+}
+
+.drawer__body,
+.modal__body {
+  width: 100%;
+  max-width: 460px;
+  max-height: 85dvh;
+  overflow-y: auto;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--felt);
+}
+
+.modal__body--wide {
+  max-width: 640px;
+}
+
+.drawer__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.6rem;
+}
+
+.drawer__note {
+  margin-top: 0;
+  color: var(--ink-dim);
+  font-size: 0.85rem;
+}
+
+.modal__actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+.modal__actions--stack {
+  flex-direction: column;
+}
+
+.chooser {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.8rem;
+}
+
+/*
+ * The inspector sheet — used for the discard pile.
+ *
+ * Deliberately not a modal: it dims nothing and blurs nothing, so the player
+ * can compare the pile against their own hand, which is the entire reason for
+ * opening it. It parks in the upper part of the screen and lets taps through
+ * to the table underneath.
+ */
+.sheet {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 40;
+  display: flex;
+  justify-content: center;
+  padding: 0.6rem;
+  pointer-events: none;
+}
+
+.sheet__body {
+  width: 100%;
+  max-width: 520px;
+  max-height: 46dvh;
+  overflow-y: auto;
+  padding: 0.8rem;
+  border: 1px solid var(--gold);
+  border-radius: 16px;
+  /* Opaque rather than translucent: the cards behind it would make the card
+     faces inside hard to read. */
+  background: #0e2a20;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55);
+  pointer-events: auto;
+}
+
+.sheet__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+}
+
+.sheet__header h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.sheet__note {
+  margin: 0 0 0.5rem;
+  color: var(--ink-dim);
+  font-size: 0.8rem;
+}
+
+.sheet__actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.7rem;
+}
+
+.sheet__actions .button {
+  flex: 1;
+  min-height: 40px;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.85rem;
+}
+
+.pileList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 0.4rem 0 0;
+  list-style: none;
+}
+
+.pileList__item {
+  position: relative;
+}
+
+.pileList__top {
+  position: absolute;
+  left: 50%;
+  bottom: -0.5rem;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: var(--gold);
+  color: #24200f;
+  font-size: 0.58rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  transform: translateX(-50%);
+}
+
+/* ---- score tables ---- */
+
+.scoretable {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.scoretable th,
+.scoretable td {
+  padding: 0.4rem 0.3rem;
+  border-bottom: 1px solid var(--line);
+  text-align: right;
+}
+
+.scoretable th[scope='row'] {
+  text-align: left;
+  color: var(--ink-dim);
+}
+
+.scoretable__team--team_a {
+  color: var(--team-a);
+}
+
+.scoretable__team--team_b {
+  color: var(--team-b);
+}
+
+.scoretable tfoot td,
+.scoretable tfoot th {
+  font-weight: 800;
+  border-bottom: none;
+}
+
+.scoretable__empty {
+  color: var(--ink-dim);
+  text-align: center;
+}
+
+.breakdown {
+  margin-top: 1rem;
+  font-size: 0.85rem;
+}
+
+.breakdown summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.breakdown__round {
+  margin-top: 0.8rem;
+}
+
+.breakdown__round h3 {
+  font-size: 0.85rem;
+  color: var(--ink-dim);
+}
+
+.breakdown__list {
+  margin: 0 0 0.6rem;
+}
+
+.breakdown__team {
+  font-weight: 700;
+}
+
+.breakdown__list dd {
+  margin: 0.2rem 0 0;
+}
+
+.breakdown__row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.1rem 0;
+  color: var(--ink-dim);
+}
+
+.breakdown__row.is-total {
+  color: var(--ink);
+  font-weight: 700;
+  border-top: 1px solid var(--line);
+  margin-top: 0.2rem;
+  padding-top: 0.2rem;
+}
+
+/* ---- log ---- */
+
+.log {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.log__item {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.85rem;
+}
+
+.log__time {
+  color: var(--ink-dim);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.log__item--team_opened .log__message,
+.log__item--bucharo_completed .log__message,
+.log__item--bucharoo_taken .log__message,
+.log__item--went_out .log__message {
+  color: var(--gold);
+  font-weight: 600;
+}
+
+/* ---- round and match results ---- */
+
+.result__title {
+  text-align: center;
+  color: var(--gold);
+}
+
+.result__scores {
+  margin-top: 0;
+  text-align: center;
+  color: var(--ink-dim);
+}
+
+.result__grid {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.result__team {
+  padding: 0.7rem;
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.result__team--team_a {
+  border-top-color: var(--team-a);
+}
+
+.result__team--team_b {
+  border-top-color: var(--team-b);
+}
+
+.result__team h3 {
+  font-size: 0.9rem;
+  letter-spacing: 0.04em;
+  color: var(--ink-dim);
+}
+
+.result__lines {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.result__lines li {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.15rem 0;
+  font-size: 0.9rem;
+}
+
+.result__total {
+  margin-top: 0.3rem;
+  padding-top: 0.3rem !important;
+  border-top: 1px solid var(--line);
+  font-weight: 800;
+}
+
+.result__match {
+  color: var(--ink-dim);
+}
+
+/* ---- toasts ---- */
+
+.toasts {
+  position: fixed;
+  left: 50%;
+  bottom: calc(1rem + env(safe-area-inset-bottom));
+  z-index: 90;
+  display: grid;
+  gap: 0.4rem;
+  width: min(92vw, 460px);
+  transform: translateX(-50%);
+}
+
+.toast {
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--danger);
+  border-radius: var(--radius);
+  background: #3a1a18;
+  color: #ffdedb;
+  font: inherit;
+  font-size: 0.9rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.toast--info {
+  border-color: var(--gold);
+  background: #2f2a16;
+  color: #f6e6bd;
+}
+
+@media (min-width: 720px) {
+  .result__grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.chooser__option {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}

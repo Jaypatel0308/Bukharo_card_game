@@ -126,7 +126,13 @@ before(async () => {
 });
 
 after(async () => {
-  child?.kill();
+  // The server must be gone before its data directory is removed, or a
+  // last-moment room write races the delete and leaves the directory behind.
+  if (child && child.exitCode === null) {
+    const exited = new Promise((resolve) => child.once('exit', resolve));
+    child.kill();
+    await Promise.race([exited, new Promise((resolve) => setTimeout(resolve, 3000))]);
+  }
   if (dataDir) await fs.rm(dataDir, { recursive: true, force: true });
 });
 

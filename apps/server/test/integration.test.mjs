@@ -106,7 +106,13 @@ before(async () => {
 });
 
 after(async () => {
-  child?.kill();
+  // The server must be gone before its data directory is removed, or a
+  // last-moment room write races the delete and leaves the directory behind.
+  if (child && child.exitCode === null) {
+    const exited = new Promise((resolve) => child.once('exit', resolve));
+    child.kill();
+    await Promise.race([exited, new Promise((resolve) => setTimeout(resolve, 3000))]);
+  }
   if (dataDir) await fs.rm(dataDir, { recursive: true, force: true });
 });
 
@@ -149,6 +155,37 @@ describe('rooms over websockets', () => {
     assert.equal(room.players.filter((p) => p.teamId === 'TEAM_A').length, 2);
     assert.equal(room.players.filter((p) => p.teamId === 'TEAM_B').length, 2);
     assert.equal(room.players.find((p) => p.isHost).displayName, 'Rahul');
+    for (const client of all) client.close();
+  });
+
+  it('lets only the host rename a team, and shows it to everyone', async () => {
+    const { host, others, all } = await seatFour();
+    assert.equal(host.room.teamNames.TEAM_A, 'Team A');
+
+    host.send({ type: 'host:teamName', teamId: 'TEAM_A', name: 'The Sharks' });
+    for (const client of all) {
+      const room = await client.waitForState((r) => r.teamNames.TEAM_A === 'The Sharks');
+      assert.equal(room.teamNames.TEAM_B, 'Team B');
+    }
+
+    others[0].send({ type: 'host:teamName', teamId: 'TEAM_B', name: 'Sneaky' });
+    const error = await others[0].waitFor((m) => m.type === 'error');
+    assert.equal(error.error.code, 'NOT_HOST');
+    assert.equal(host.room.teamNames.TEAM_B, 'Team B');
+
+    // An empty name falls back rather than leaving a nameless team.
+    host.send({ type: 'host:teamName', teamId: 'TEAM_A', name: '   ' });
+    await host.waitForState((r) => r.teamNames.TEAM_A === 'Team A');
+
+    for (const client of all) client.close();
+  });
+
+  it('carries team names into the game log', async () => {
+    const { host, all } = await seatFour();
+    host.send({ type: 'host:teamName', teamId: 'TEAM_A', name: 'Rockets' });
+    await host.waitForState((r) => r.teamNames.TEAM_A === 'Rockets');
+    await startMatch(all, host);
+    assert.equal(host.room.game.teams.TEAM_A.name, 'Rockets');
     for (const client of all) client.close();
   });
 

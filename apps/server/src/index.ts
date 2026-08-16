@@ -253,6 +253,11 @@ async function handleMessage(connection: Connection, message: ClientMessage): Pr
       broadcastRoom(roomId);
       return;
     }
+    case 'host:teamName': {
+      const result = await manager.renameTeam(roomId, playerId, message.teamId, message.name);
+      if (handleResult(ws, result)) broadcastRoom(roomId);
+      return;
+    }
     case 'host:settings': {
       const result = await manager.updateSettings(roomId, playerId, message.targetScore);
       if (handleResult(ws, result)) broadcastRoom(roomId);

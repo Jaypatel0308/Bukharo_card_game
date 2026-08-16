@@ -2,7 +2,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
-import type { GameState, RuleConfig, Seat } from '@bukharo/game-engine';
+import type { GameState, RuleConfig, Seat, TeamId } from '@bukharo/game-engine';
 import type { RoomStatus } from '@bukharo/shared';
 
 /**
@@ -28,6 +28,7 @@ export interface Room {
   status: RoomStatus;
   targetScore: number;
   rules: RuleConfig;
+  teamNames: Record<TeamId, string>;
   players: RoomPlayer[];
   game: GameState | null;
   createdAt: number;

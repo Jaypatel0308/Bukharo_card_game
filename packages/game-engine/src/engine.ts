@@ -819,6 +819,22 @@ function discardCard(
     return { ok: true, state: ended, events };
   }
 
+  if (tookBucharoo && rules.bucharooPickupContinuesTurn) {
+    // The turn carries on with the new hand; another discard will end it.
+    refreshPhase(draft);
+    draft.stateVersion += 1;
+    events.push({
+      type: 'CARD_DISCARDED',
+      payload: {
+        playerId: draftPlayer.id,
+        card,
+        handCount: draftPlayer.hand.length,
+        nextPlayerId: draft.currentPlayerId,
+      },
+    });
+    return { ok: true, state: draft, events };
+  }
+
   advanceTurn(draft);
   draft.stateVersion += 1;
   events.push({

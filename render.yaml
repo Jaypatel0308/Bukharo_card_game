@@ -1,0 +1,15 @@
+# One free web service that builds the client and serves it alongside the
+# websocket API. Render sets PORT itself; everything else has a sane default.
+services:
+  - type: web
+    name: bukharo
+    runtime: node
+    plan: free
+    # --include=dev is required: Render sets NODE_ENV=production, which would
+    # otherwise skip TypeScript and Vite and leave nothing to build with.
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"

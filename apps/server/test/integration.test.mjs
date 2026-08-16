@@ -16,9 +16,9 @@ import WebSocket from 'ws';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const serverEntry = path.resolve(here, '../dist/index.js');
-const PORT = 8000 + Math.floor(Math.random() * 1500);
-const URL = `ws://127.0.0.1:${PORT}/ws`;
-
+// The port is chosen by the OS (PORT=0) and read back from the server's own
+// startup line, so parallel runs and busy CI machines cannot collide.
+let wsUrl;
 let child;
 let dataDir;
 
@@ -34,7 +34,7 @@ class Client {
   }
 
   async connect() {
-    this.ws = new WebSocket(URL);
+    this.ws = new WebSocket(wsUrl);
     await new Promise((resolve, reject) => {
       this.ws.once('open', resolve);
       this.ws.once('error', reject);
@@ -88,14 +88,16 @@ class Client {
 before(async () => {
   dataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bukharo-test-'));
   child = spawn(process.execPath, [serverEntry], {
-    env: { ...process.env, PORT: String(PORT), DATA_DIR: dataDir, SWEEP_INTERVAL_MS: '600000' },
+    env: { ...process.env, PORT: '0', DATA_DIR: dataDir, SWEEP_INTERVAL_MS: '600000' },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   child.stderr.on('data', (d) => process.stderr.write(`[server] ${d}`));
   await new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error('server did not start')), 8000);
+    const timer = setTimeout(() => reject(new Error('server did not start')), 30000);
     child.stdout.on('data', (data) => {
-      if (data.toString().includes('listening')) {
+      const match = /listening on http:\/\/[^:]+:(\d+)/.exec(data.toString());
+      if (match) {
+        wsUrl = `ws://127.0.0.1:${match[1]}/ws`;
         clearTimeout(timer);
         resolve();
       }
@@ -201,7 +203,11 @@ describe('rooms over websockets', () => {
     active.send({ type: 'game:action', actionId: 'dup-1', action: { type: 'DRAW_STOCK' } });
     await active.waitForState((room) => room.game?.you?.hand.length === 14);
     active.send({ type: 'game:action', actionId: 'dup-1', action: { type: 'DRAW_STOCK' } });
-    await new Promise((r) => setTimeout(r, 150));
+    // Messages on one connection are processed in order, so a pong proves the
+    // server has finished with the duplicate. Waiting a fixed number of
+    // milliseconds would only prove the test was patient enough.
+    active.send({ type: 'ping' });
+    await active.waitFor((m) => m.type === 'pong');
 
     assert.equal(active.room.game.you.hand.length, 14);
     assert.equal(active.room.game.stockCount, stockBefore - 1);

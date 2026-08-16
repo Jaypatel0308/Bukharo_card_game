@@ -163,12 +163,48 @@ before calling the MVP done.
 ## Deployment
 
 The server serves the built client itself, so a single Node process behind HTTPS
-is enough:
+is all it takes:
 
 ```bash
-npm ci && npm run build && npm start
+npm ci --include=dev && npm run build && npm start
 ```
 
-Point a persistent volume at `DATA_DIR`. For more than one server instance,
-replace `FileStore` with a shared store (Redis) so rooms are visible to every
-instance, and enable sticky sessions or move room state fully into that store.
+`--include=dev` matters wherever `NODE_ENV=production` is set during the build:
+TypeScript and Vite are dev dependencies, and without them there is nothing to
+build with.
+
+### Render
+
+`render.yaml` describes a free web service. In the Render dashboard choose
+**New → Blueprint** and pick this repository; it needs no further configuration.
+
+If the blueprint is ever rejected because the spec has moved on, the same thing
+by hand as **New → Web Service** works just as well:
+
+| Setting | Value |
+| --- | --- |
+| Runtime | Node |
+| Build command | `npm ci --include=dev && npm run build` |
+| Start command | `npm start` |
+| Health check path | `/health` |
+| Environment variable | `NODE_VERSION` = `22` |
+
+Two things to expect on the free plan: the service sleeps after about 15 minutes
+without traffic, so the first visitor waits roughly a minute while it wakes; and
+its disk does not survive a restart, so `data/` is effectively scratch space and
+rooms do not outlive a redeploy. Neither matters for an evening's play. A paid
+instance with a disk fixes both.
+
+### Anywhere else
+
+`Dockerfile` builds a self-contained image for hosts that take one (Fly.io,
+Koyeb, Cloud Run). Point `DATA_DIR` at a persistent volume to keep games across
+restarts.
+
+### One instance only
+
+Rooms live in the server's memory, so **do not scale past a single instance**:
+a second one cannot see the first one's rooms, and players would be split across
+tables that cannot find each other. Going wider means moving room state into a
+shared store — implement the three-method `Store` interface against Redis and
+have `RoomManager` read through it rather than its in-process map.

@@ -10,6 +10,9 @@ services:
     buildCommand: npm ci --include=dev && npm run build
     startCommand: npm start
     healthCheckPath: /health
+    # Rooms live in this process's memory, so a second instance would not be
+    # able to see the first one's games. Keep this at one.
+    numInstances: 1
     envVars:
       - key: NODE_VERSION
         value: "22"

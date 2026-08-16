@@ -48,6 +48,8 @@ function appFor(state: GameState, viewerId: string): Bukharo {
     rules: DEFAULT_RULES,
     youId: viewerId,
     waitingForPlayerId: null,
+    waitingSince: null,
+    disconnectGraceMs: 90_000,
     createdAt: Date.now(),
   };
 
@@ -67,6 +69,8 @@ function appFor(state: GameState, viewerId: string): Bukharo {
     kickPlayer: vi.fn(),
     setTargetScore: vi.fn(),
     setTeamName: vi.fn(),
+    endMatch: vi.fn(),
+    skipAbsentPlayer: vi.fn(),
     startGame: vi.fn(),
     nextRound: vi.fn(),
     restartMatch: vi.fn(),

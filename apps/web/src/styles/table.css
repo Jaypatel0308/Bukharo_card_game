@@ -516,3 +516,31 @@
 .opponent__cards {
   font-variant-numeric: tabular-nums;
 }
+
+/* ---- a turn nobody is playing (§54) ---- */
+
+.stalled {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--warn);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--warn) 12%, transparent);
+}
+
+.stalled__message {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.stalled__actions {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.stalled .hint {
+  margin: 0;
+}

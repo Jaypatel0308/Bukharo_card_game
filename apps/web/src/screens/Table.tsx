@@ -10,6 +10,7 @@ import { Melds } from '../components/Melds';
 import { OpponentSeat } from '../components/OpponentSeat';
 import { RoundSummary } from '../components/RoundSummary';
 import { Scoreboard } from '../components/Scoreboard';
+import { StalledTurn } from '../components/StalledTurn';
 import { TableCentre } from '../components/TableCentre';
 import { TopBar } from '../components/TopBar';
 import { WildChooser } from '../components/WildChooser';
@@ -51,6 +52,7 @@ export function Table({ app }: { app: Bukharo }) {
   const yourTeam: TeamId = you?.teamId ?? 'TEAM_A';
   const theirTeam: TeamId = yourTeam === 'TEAM_A' ? 'TEAM_B' : 'TEAM_A';
 
+  const isHost = room.players.find((p) => p.id === room.youId)?.isHost ?? false;
   const activePlayer = game.players.find((p) => p.id === game.currentPlayerId);
   const connectedById = new Map(room.players.map((p) => [p.id, p.connected]));
   const waitingFor = room.waitingForPlayerId
@@ -150,6 +152,17 @@ export function Table({ app }: { app: Bukharo }) {
       <p className={`turnbar ${isYourTurn ? 'is-yours' : ''}`} role="status" aria-live="polite">
         {turnMessage()}
       </p>
+
+      {waitingFor && room.status === 'PLAYING' && (
+        <StalledTurn
+          playerName={waitingFor.displayName}
+          waitingSince={room.waitingSince}
+          graceMs={room.disconnectGraceMs}
+          isHost={isHost}
+          onSkip={app.skipAbsentPlayer}
+          onEndMatch={app.endMatch}
+        />
+      )}
 
       {renderMelds(theirTeam)}
 

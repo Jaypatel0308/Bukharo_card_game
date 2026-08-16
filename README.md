@@ -16,7 +16,7 @@ Open site → Create room → Share code → Friends join → Sit in teams → S
 ```bash
 npm install
 npm run build
-npm test          # 173 tests: engine, server and web client
+npm test          # 183 tests: engine, server and web client
 npm start         # http://localhost:8787
 ```
 
@@ -133,7 +133,7 @@ behaviour.
 ```bash
 npm run lint          # ESLint: bugs, not style
 npm run test:engine   # 75 deterministic rule tests, no I/O
-npm run test:server   # 27 tests against a real server process
+npm run test:server   # 37 tests against a real server process
 npm run test:web      # 71 client tests (Vitest, jsdom)
 ```
 
@@ -194,6 +194,24 @@ Two things are deliberately outside the themes. Team colours stay red and blue
 everywhere, because they identify people rather than decorate the page. Card
 faces stay white, because a playing card is white in every room and tinting it
 only makes the pips harder to read.
+
+## Reliability
+
+A few properties the server holds to, each with a regression test written from
+the scenario that broke it:
+
+- **A room anyone is in always has a reachable host.** The role follows the
+  people, not the seat it started in — otherwise a host who is last to leave
+  takes the match with them, and the players who return can neither deal the
+  next round nor end it.
+- **Nothing a client sends is trusted.** Protocol types are erased at runtime,
+  so every field is checked at the boundary in `validate.ts`. A seat that is
+  not one of the four is refused rather than stored.
+- **A turn nobody is playing can be moved past.** After the grace period the
+  host may skip a disconnected player, or end the match outright. Nothing is
+  drawn or discarded on their behalf.
+- **A socket occupies exactly one room.** Joining another releases the first,
+  so no room is held open by a player who is not there.
 
 ## Configuration
 

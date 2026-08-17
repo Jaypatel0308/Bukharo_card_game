@@ -18,6 +18,7 @@ const handlers = () => ({
 const BASE = {
   discardCount: 3,
   meldLabel: 'Open with 4+',
+  meldLabelShort: 'Open 4+',
   canDraw: false,
   canMeld: false,
   canAddToMeld: false,
@@ -25,7 +26,8 @@ const BASE = {
   hasSelection: false,
 };
 
-const order = () => screen.getAllByRole('button').map((b) => b.textContent);
+const order = () =>
+  screen.getAllByRole('button').map((b) => b.getAttribute('aria-label') ?? b.textContent);
 
 describe('ActionBar', () => {
   /**
@@ -34,6 +36,8 @@ describe('ActionBar', () => {
    * player's finger and a tap meant for the meld button drew a card instead.
    */
   it('keeps the same buttons in the same order in every phase', () => {
+    // Accessible names, which is what a player or a screen reader acts on;
+    // the visible wording shortens on a narrow screen.
     const expected = [
       'Draw card',
       'Take pile (3)',
@@ -106,7 +110,15 @@ describe('ActionBar', () => {
   });
 
   it('renames the meld button once the team has opened', () => {
-    render(<ActionBar {...BASE} meldLabel="Create meld" {...handlers()} />);
+    render(<ActionBar {...BASE} meldLabel="Create meld" meldLabelShort="Meld" {...handlers()} />);
     expect(screen.getByRole('button', { name: 'Create meld' })).toBeTruthy();
+  });
+
+  it('carries a short wording for narrow screens without losing the full one', () => {
+    render(<ActionBar {...BASE} {...handlers()} />);
+    const meld = screen.getByRole('button', { name: 'Open with 4+' });
+    // Both are in the markup; CSS decides which is shown at a given width.
+    expect(meld.textContent).toContain('Open with 4+');
+    expect(meld.textContent).toContain('Open 4+');
   });
 });

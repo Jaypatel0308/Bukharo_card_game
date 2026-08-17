@@ -135,6 +135,7 @@ npm run lint          # ESLint: bugs, not style
 npm run test:engine   # 75 deterministic rule tests, no I/O
 npm run test:server   # 37 tests against a real server process
 npm run test:web      # 81 client tests (Vitest, jsdom)
+npm run test:e2e      # 8 browser tests (Playwright, four players at once)
 ```
 
 The lint rules are chosen to catch what review misses rather than to argue
@@ -175,11 +176,16 @@ bar — including a regression test that its buttons keep the same identity in
 every phase, since a button that changes meaning under a waiting player's
 finger once turned a tap on "Open with 4+" into a card draw.
 
-Not covered: browser-level end-to-end tests. The UI has been built and typechecks
-against the shared protocol, and the whole client/server contract is exercised
-headlessly, but no Playwright/Cypress suite drives the actual rendered interface,
-and the interface has not been played by hand on a phone. That is the main gap
-before calling the MVP done.
+The browser suite opens four contexts against the built client and the real
+server, and plays. It exists because every bug that reached a player was in the
+client and invisible to the other suites — a hand that did not rearrange, a
+button that changed meaning under a finger, a name box that could not be typed
+into. jsdom dispatches a `change` event with a whole string; a browser sends
+keystrokes, which is the difference that hid the last one.
+
+Still not covered: real phones. The layout is exercised at a desktop viewport
+only, so touch targets, the two-row action bar and the meld fans on a small
+screen remain unverified by anything but reading.
 
 ## Theming
 

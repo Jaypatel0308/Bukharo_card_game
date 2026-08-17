@@ -19,9 +19,11 @@
     "test:server": "npm run test -w @bukharo/server",
     "test:web": "npm run test -w @bukharo/web",
     "lint": "eslint . --max-warnings=0",
-    "lint:fix": "eslint . --fix"
+    "lint:fix": "eslint . --fix",
+    "test:e2e": "npm run build -w @bukharo/web && npm run build -w @bukharo/server && playwright test"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "eslint": "^9.39.5",
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-react-hooks": "^5.2.0",

@@ -16,7 +16,7 @@ Open site → Create room → Share code → Friends join → Sit in teams → S
 ```bash
 npm install
 npm run build
-npm test          # 193 tests: engine, server and web client
+npm test          # 194 tests: engine, server and web client
 npm start         # http://localhost:8787
 ```
 
@@ -134,8 +134,8 @@ behaviour.
 npm run lint          # ESLint: bugs, not style
 npm run test:engine   # 75 deterministic rule tests, no I/O
 npm run test:server   # 37 tests against a real server process
-npm run test:web      # 81 client tests (Vitest, jsdom)
-npm run test:e2e      # 8 browser tests (Playwright, four players at once)
+npm run test:web      # 82 client tests (Vitest, jsdom)
+npm run test:e2e      # 23 browser tests (Playwright: desktop and phone)
 ```
 
 The lint rules are chosen to catch what review misses rather than to argue
@@ -183,9 +183,16 @@ button that changed meaning under a finger, a name box that could not be typed
 into. jsdom dispatches a `change` event with a whole string; a browser sends
 keystrokes, which is the difference that hid the last one.
 
-Still not covered: real phones. The layout is exercised at a desktop viewport
-only, so touch targets, the two-row action bar and the meld fans on a small
-screen remain unverified by anything but reading.
+It runs twice: once at a desktop width, once as a phone with touch instead of
+a mouse. The phone pass measures rather than eyeballs — no sideways scrolling,
+every control at least 44px, action rows level, a whole turn played by tapping.
+Writing it turned up three things reading had not: icon buttons at 40px, sort
+chips at 34px, and a second action row half again as tall as the first because
+two labels wrapped.
+
+Still not covered: an actual handset. Emulation proves the layout, not the
+feel — how the cards read in sunlight, whether the fans are tappable with a
+real thumb.
 
 ## Theming
 

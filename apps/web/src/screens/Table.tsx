@@ -212,6 +212,7 @@ export function Table({ app }: { app: Bukharo }) {
       <ActionBar
         discardCount={game.discardPile.length}
         meldLabel={teamOpened ? 'Create meld' : `Open with ${minimumMeld}+`}
+        meldLabelShort={teamOpened ? 'Meld' : `Open ${minimumMeld}+`}
         canDraw={canDraw}
         canMeld={meldPreview?.ok === true}
         canAddToMeld={addPreview?.ok === true}

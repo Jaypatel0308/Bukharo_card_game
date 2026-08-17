@@ -57,8 +57,10 @@
 }
 
 .iconButton {
-  min-width: 40px;
-  min-height: 40px;
+  /* The same minimum as every other control: a 40px target is below what a
+     thumb reliably hits. */
+  min-width: var(--tap);
+  min-height: var(--tap);
   border: 1px solid var(--line);
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.06);
@@ -68,7 +70,9 @@
 }
 
 .chip {
-  min-height: 34px;
+  /* Sorting happens constantly during a hand, so these are proper controls and
+     get the same target as the rest. */
+  min-height: var(--tap);
   padding: 0.25rem 0.7rem;
   border: 1px solid var(--line);
   border-radius: 999px;

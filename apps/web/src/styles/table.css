@@ -480,6 +480,26 @@
   min-width: 0;
   padding: 0.6rem 0.3rem;
   font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+/*
+ * Narrow screens get shorter wording. The full phrase stays in the accessible
+ * name, so nothing is lost to a screen reader — only the two longest labels
+ * wrapped, which left the second row half again as tall as the first.
+ */
+.actionbar__short {
+  display: none;
+}
+
+@media (max-width: 480px) {
+  .actionbar__long {
+    display: none;
+  }
+
+  .actionbar__short {
+    display: inline;
+  }
 }
 
 .hint--floating {

@@ -1,6 +1,8 @@
 interface Props {
   discardCount: number;
   meldLabel: string;
+  /** The same action, worded to fit a phone. */
+  meldLabelShort: string;
   canDraw: boolean;
   canMeld: boolean;
   canAddToMeld: boolean;
@@ -24,6 +26,7 @@ interface Props {
 export function ActionBar({
   discardCount,
   meldLabel,
+  meldLabelShort,
   canDraw,
   canMeld,
   canAddToMeld,
@@ -57,11 +60,25 @@ export function ActionBar({
       </div>
 
       <div className="actionbar__row">
-        <button type="button" className="button" disabled={!canMeld} onClick={onMeld}>
-          {meldLabel}
+        <button
+          type="button"
+          className="button"
+          disabled={!canMeld}
+          aria-label={meldLabel}
+          onClick={onMeld}
+        >
+          <span className="actionbar__long">{meldLabel}</span>
+          <span className="actionbar__short">{meldLabelShort}</span>
         </button>
-        <button type="button" className="button" disabled={!canAddToMeld} onClick={onAddToMeld}>
-          Add to meld
+        <button
+          type="button"
+          className="button"
+          disabled={!canAddToMeld}
+          aria-label="Add to meld"
+          onClick={onAddToMeld}
+        >
+          <span className="actionbar__long">Add to meld</span>
+          <span className="actionbar__short">Add</span>
         </button>
         <button
           type="button"

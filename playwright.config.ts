@@ -1,4 +1,4 @@
-import { defineConfig } from '@playwright/test';
+import { defineConfig, devices } from '@playwright/test';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -30,6 +30,19 @@ export default defineConfig({
     trace: 'retain-on-failure',
     video: 'off',
   },
+  projects: [
+    {
+      name: 'desktop',
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 } },
+    },
+    {
+      // A small modern Android: narrower than most phones in use, so anything
+      // that fits here fits the rest. Touch rather than mouse, which is how
+      // the game is actually played.
+      name: 'mobile',
+      use: { ...devices['Pixel 5'] },
+    },
+  ],
   webServer: {
     command: 'node apps/server/dist/index.js',
     url: `${baseURL}/health`,

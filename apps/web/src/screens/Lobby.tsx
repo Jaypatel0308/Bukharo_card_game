@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Seat } from '@bukharo/shared';
 import { TARGET_SCORE_OPTIONS } from '@bukharo/shared';
 
+import { TeamNameField } from '../components/TeamNameField';
 import { ThemePicker } from '../components/ThemePicker';
 import type { Bukharo } from '../state/useBukharo';
 import { SEAT_LABEL } from '../ui/cards';
@@ -116,12 +117,10 @@ export function Lobby({ app }: { app: Bukharo }) {
                 aria-hidden="true"
               />
               {isHost ? (
-                <input
-                  className="teamName__input"
+                <TeamNameField
+                  label={`Name for the ${teamId === 'TEAM_A' ? 'red' : 'blue'} team`}
                   value={room.teamNames[teamId]}
-                  maxLength={20}
-                  aria-label={`Name for the ${teamId === 'TEAM_A' ? 'red' : 'blue'} team`}
-                  onChange={(event) => app.setTeamName(teamId, event.target.value)}
+                  onCommit={(name) => app.setTeamName(teamId, name)}
                 />
               ) : (
                 <span className="teamName__static">{room.teamNames[teamId]}</span>

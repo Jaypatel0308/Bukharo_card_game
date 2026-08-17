@@ -16,7 +16,7 @@ Open site → Create room → Share code → Friends join → Sit in teams → S
 ```bash
 npm install
 npm run build
-npm test          # 183 tests: engine, server and web client
+npm test          # 193 tests: engine, server and web client
 npm start         # http://localhost:8787
 ```
 
@@ -134,7 +134,7 @@ behaviour.
 npm run lint          # ESLint: bugs, not style
 npm run test:engine   # 75 deterministic rule tests, no I/O
 npm run test:server   # 37 tests against a real server process
-npm run test:web      # 71 client tests (Vitest, jsdom)
+npm run test:web      # 81 client tests (Vitest, jsdom)
 ```
 
 The lint rules are chosen to catch what review misses rather than to argue

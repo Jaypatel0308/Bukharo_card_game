@@ -19,7 +19,14 @@ import jsxA11y from 'eslint-plugin-jsx-a11y';
  */
 export default tseslint.config(
   {
-    ignores: ['**/dist/**', '**/node_modules/**', '**/*.tsbuildinfo', 'data/**'],
+    ignores: [
+      '**/dist/**',
+      '**/node_modules/**',
+      '**/*.tsbuildinfo',
+      'data/**',
+      'test-results/**',
+      'playwright-report/**',
+    ],
   },
 
   {
@@ -79,7 +86,13 @@ export default tseslint.config(
 
   // ---- Tests ----
   {
-    files: ['**/*.test.{ts,tsx,mjs}', 'packages/game-engine/test/**', 'apps/server/test/**'],
+    files: [
+      '**/*.test.{ts,tsx,mjs}',
+      '**/*.spec.ts',
+      'e2e/**',
+      'packages/game-engine/test/**',
+      'apps/server/test/**',
+    ],
     languageOptions: {
       globals: { ...globals.node },
     },

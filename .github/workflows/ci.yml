@@ -39,6 +39,33 @@ jobs:
       # client, so a type error anywhere fails the build.
       - run: npm run build
 
-      # 142 tests: the deterministic engine suite, the server suite against a
-      # real process, and the client suite in jsdom.
+      # The engine suite, the server suite against a real process, and the
+      # client suite in jsdom.
       - run: npm test
+
+  browser:
+    name: browser
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci --include=dev
+
+      # Its own job: downloading a browser is slow, and a failure here should
+      # be distinguishable at a glance from a unit test failing.
+      - run: npx playwright install --with-deps chromium
+
+      - run: npm run test:e2e
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-traces
+          path: test-results/
+          retention-days: 7

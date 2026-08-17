@@ -14,5 +14,10 @@ data/
 .env.local
 *.log
 
+# Browser test output
+test-results/
+playwright-report/
+blob-report/
+
 # OS noise
 .DS_Store

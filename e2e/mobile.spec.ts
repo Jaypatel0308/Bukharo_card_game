@@ -111,7 +111,9 @@ test.describe('on a phone', () => {
   test('a selected card is unmistakable, even after a tap leaves hover behind', async ({
     browser,
   }) => {
-    const player = await seatAndStart(browser);
+    await seatAndStart(browser);
+    // The dealer is chosen at random, so the player on turn is never assumed:
+    // every assertion below is made against whoever it actually is.
     const active = await activePlayer(players);
     await active.page.getByRole('button', { name: 'Draw card' }).tap();
 
@@ -135,7 +137,7 @@ test.describe('on a phone', () => {
     expect(state.lift, 'a chosen card should stand well clear of its row').toBeGreaterThan(12);
     expect(state.hasRing, 'a chosen card should carry the selection ring').toBe(true);
     expect(state.hasMark, 'a chosen card should carry a mark, not only a lift').toBe(true);
-    await expect(player.page.locator('.hand__count')).toContainText('1 selected');
+    await expect(active.page.locator('.hand__count')).toContainText('1 selected');
   });
 
   test('the hand can be tidied while waiting for someone else', async ({ browser }) => {

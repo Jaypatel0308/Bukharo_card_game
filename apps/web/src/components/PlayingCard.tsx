@@ -1,6 +1,6 @@
 import type { Card, NaturalRank } from '@bukharo/game-engine';
 
-import { SUIT_SYMBOL, cardLabel, isRedSuit, isWild } from '../ui/cards';
+import { SUIT_SYMBOL, cardLabel, isRedSuit } from '../ui/cards';
 
 export type CardSize = 'xs' | 'sm' | 'md' | 'lg';
 
@@ -94,14 +94,12 @@ export function PlayingCard({
   onClick,
   disabled = false,
 }: Props) {
-  const wild = isWild(card, wildRank);
   const classes = [
     'card',
     `card--${size}`,
     isRedSuit(card.suit) ? 'card--red' : 'card--black',
     card.isJoker ? 'card--joker' : '',
     selected ? 'is-selected' : '',
-    wild ? 'is-wild' : '',
     isNew ? 'is-new' : '',
     onClick ? 'card--button' : '',
   ]
@@ -133,10 +131,9 @@ export function PlayingCard({
         <span className="card__suitMark">{suit}</span>
       </span>
 
-      {/* A glyph, not just a colour, so wild status survives colour blindness. */}
-      {wild && (
-        <span className="card__wild" aria-hidden="true">
-          W
+      {selected && (
+        <span className="card__chosen" aria-hidden="true">
+          ✓
         </span>
       )}
       {isNew && (

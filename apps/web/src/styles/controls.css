@@ -13,8 +13,14 @@
   transition: transform 0.12s ease, background 0.12s ease;
 }
 
-.button:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.14);
+@media (hover: hover) and (pointer: fine) {
+  .button:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.14);
+  }
+
+  .button--primary:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--accent) 82%, white);
+  }
 }
 
 .button:active:not(:disabled) {
@@ -30,10 +36,6 @@
   background: var(--accent);
   border-color: var(--accent);
   color: var(--accent-ink);
-}
-
-.button--primary:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--accent) 82%, white);
 }
 
 .button--ghost {

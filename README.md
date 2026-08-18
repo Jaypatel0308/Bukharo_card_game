@@ -16,7 +16,7 @@ Open site → Create room → Share code → Friends join → Sit in teams → S
 ```bash
 npm install
 npm run build
-npm test          # 194 tests: engine, server and web client
+npm test          # 201 tests: engine, server and web client
 npm start         # http://localhost:8787
 ```
 
@@ -134,8 +134,8 @@ behaviour.
 npm run lint          # ESLint: bugs, not style
 npm run test:engine   # 75 deterministic rule tests, no I/O
 npm run test:server   # 37 tests against a real server process
-npm run test:web      # 82 client tests (Vitest, jsdom)
-npm run test:e2e      # 23 browser tests (Playwright: desktop and phone)
+npm run test:web      # 89 client tests (Vitest, jsdom)
+npm run test:e2e      # 29 browser tests (Playwright: desktop and phone)
 ```
 
 The lint rules are chosen to catch what review misses rather than to argue
@@ -193,6 +193,17 @@ two labels wrapped.
 Still not covered: an actual handset. Emulation proves the layout, not the
 feel — how the cards read in sunlight, whether the fans are tappable with a
 real thumb.
+
+## What the interface deliberately does not tell you
+
+Wild cards are not marked. There is no ring, no badge, and the screen reader
+label says "6 of hearts" like any other card. Discarding a wild is a mistake a
+player is entitled to make, and the next player to take the pile profits from
+it — flagging them would quietly remove a decision from the game. The round's
+wild rank is displayed on the table, and working out which of your cards match
+it is part of playing.
+
+The same reasoning keeps the count of wilds out of the discard pile summary.
 
 ## Theming
 

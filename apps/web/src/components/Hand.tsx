@@ -10,14 +10,21 @@ interface Props {
   wildRank: NaturalRank | null;
   selectedIds: string[];
   onToggle(cardId: string): void;
-  disabled?: boolean;
+  /** Drives the picked-up highlight, which belongs to the turn it happened in. */
+  isYourTurn?: boolean;
 }
 
 /**
  * The player's hand. Tapping selects — that is the primary interaction on every
  * device (§41) — and cards can also be dragged into a preferred order (§37).
  */
-export function Hand({ cards, wildRank, selectedIds, onToggle, disabled = false }: Props) {
+/**
+ * Sorting, dragging and selecting are available at any time, not only on your
+ * turn: tidying your hand and planning a meld while you wait is most of what
+ * there is to do between turns. Nothing here can be submitted — the action bar
+ * decides that — so an early selection costs nothing.
+ */
+export function Hand({ cards, wildRank, selectedIds, onToggle, isYourTurn = false }: Props) {
   const [sortMode, setSortMode] = useState<SortMode>('suit');
   const [order, setOrder] = useState<string[]>([]);
   /** True once the player has dragged a card, which pins their arrangement. */
@@ -53,8 +60,8 @@ export function Hand({ cards, wildRank, selectedIds, onToggle, disabled = false 
   // The highlight answers "what did I just pick up?", so it lives exactly as
   // long as the turn does.
   useEffect(() => {
-    if (disabled) setJustPickedUp([]);
-  }, [disabled]);
+    if (!isYourTurn) setJustPickedUp([]);
+  }, [isYourTurn]);
 
   const byId = new Map(cards.map((c) => [c.id, c]));
   const ordered = order.map((id) => byId.get(id)).filter((c): c is Card => Boolean(c));
@@ -78,7 +85,6 @@ export function Hand({ cards, wildRank, selectedIds, onToggle, disabled = false 
   };
 
   const onPointerDown = (event: React.PointerEvent, cardId: string): void => {
-    if (disabled) return;
     drag.current = { id: cardId, startX: event.clientX, moved: false };
   };
 
@@ -109,6 +115,9 @@ export function Hand({ cards, wildRank, selectedIds, onToggle, disabled = false 
       <div className="hand__toolbar">
         <span className="hand__count">
           {cards.length} card{cards.length === 1 ? '' : 's'}
+          {selectedIds.length > 0 && (
+            <span className="hand__selected"> · {selectedIds.length} selected</span>
+          )}
           {newCount > 0 && <span className="hand__new"> · {newCount} just picked up</span>}
         </span>
         <div className="hand__sorts" role="group" aria-label="Sort your hand">
@@ -151,7 +160,6 @@ export function Hand({ cards, wildRank, selectedIds, onToggle, disabled = false 
               wildRank={wildRank}
               selected={selectedIds.includes(card.id)}
               isNew={justPickedUp.includes(card.id)}
-              disabled={disabled}
               onClick={() => {
                 if (suppressClick.current) {
                   suppressClick.current = false;

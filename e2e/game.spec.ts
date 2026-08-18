@@ -108,6 +108,43 @@ test.describe('four players, one browser each', () => {
     await expect(waiting.page.locator('.hand__cards [data-card-id]')).toHaveCount(13);
   });
 
+  test('a running commentary says what the table is doing', async () => {
+    await startMatch(players);
+    const active = await activePlayer(players);
+    const watcher = players.find((p) => p !== active)!;
+
+    // The watcher is told what the player on turn is up to, by name.
+    await expect(watcher.page.locator('.activity__now')).toContainText(active.name);
+    await expect(active.page.locator('.activity__now')).toContainText('You are');
+
+    await active.page.getByRole('button', { name: 'Draw card' }).click();
+
+    // And what just happened reaches everyone, without opening the log.
+    for (const player of players) {
+      await expect(player.page.locator('.activity__last')).toContainText('drew from the stock');
+    }
+  });
+
+  test('no card is marked as wild, so a player can still throw one away', async () => {
+    await startMatch(players);
+    const active = await activePlayer(players);
+
+    const marked = await active.page.evaluate(() => ({
+      rings: document.querySelectorAll('.card.is-wild').length,
+      badges: document.querySelectorAll('.card__wild').length,
+      labelled: [...document.querySelectorAll('.hand__cards .card')].filter((c) =>
+        (c.getAttribute('aria-label') ?? '').includes('wild'),
+      ).length,
+    }));
+
+    expect(marked.rings).toBe(0);
+    expect(marked.badges).toBe(0);
+    expect(marked.labelled, 'a screen reader must not be told either').toBe(0);
+
+    // The round's wild rank is still on the table for everyone to read.
+    await expect(active.page.locator('.pile--wild .pile__label')).toContainText('Wild');
+  });
+
   test('the whole discard pile can be read without hiding the hand', async () => {
     await startMatch(players);
     const active = await activePlayer(players);

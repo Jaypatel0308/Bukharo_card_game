@@ -47,9 +47,12 @@ describe('wild cards', () => {
     expect(isWild(card('6', 'hearts'), null)).toBe(false);
   });
 
-  it('says so in the accessible label, not only in colour', () => {
-    expect(cardLabel(card('6', 'hearts'), '6')).toBe('6 of hearts, wild');
+  it('does not announce a wild card, so no player is told which of theirs are wild', () => {
+    // Discarding a wild is a mistake players are allowed to make; flagging
+    // them would remove a decision and give screen reader users information
+    // the rest of the table does not have.
+    expect(cardLabel(card('6', 'hearts'), '6')).toBe('6 of hearts');
     expect(cardLabel(card('7', 'hearts'), '6')).toBe('7 of hearts');
-    expect(cardLabel(joker, '6')).toBe('Joker, wild');
+    expect(cardLabel(joker, '6')).toBe('Joker');
   });
 });

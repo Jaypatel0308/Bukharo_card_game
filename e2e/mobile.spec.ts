@@ -108,6 +108,56 @@ test.describe('on a phone', () => {
     await expect(active.page.locator('.hand__cards [data-card-id]')).toHaveCount(13);
   });
 
+  test('a selected card is unmistakable, even after a tap leaves hover behind', async ({
+    browser,
+  }) => {
+    await seatAndStart(browser);
+    // The dealer is chosen at random, so the player on turn is never assumed:
+    // every assertion below is made against whoever it actually is.
+    const active = await activePlayer(players);
+    await active.page.getByRole('button', { name: 'Draw card' }).tap();
+
+    const card = active.page.locator('.hand__cards [data-card-id] .card').nth(6);
+    await card.tap();
+    await active.page.waitForTimeout(300); // let the lift settle
+
+    const state = await active.page.evaluate(() => {
+      const selected = document.querySelector('.card.is-selected') as HTMLElement;
+      const slot = selected.closest('[data-card-id]') as HTMLElement;
+      const style = getComputedStyle(selected);
+      return {
+        lift: Math.round(slot.getBoundingClientRect().top - selected.getBoundingClientRect().top),
+        hasRing: style.boxShadow.includes('0px 0px 0px 3px'),
+        hasMark: Boolean(selected.querySelector('.card__chosen')),
+      };
+    });
+
+    // Touch browsers leave :hover on the last thing tapped; that rule used to
+    // outrank the selected state and left a chosen card looking unchosen.
+    expect(state.lift, 'a chosen card should stand well clear of its row').toBeGreaterThan(12);
+    expect(state.hasRing, 'a chosen card should carry the selection ring').toBe(true);
+    expect(state.hasMark, 'a chosen card should carry a mark, not only a lift').toBe(true);
+    await expect(active.page.locator('.hand__count')).toContainText('1 selected');
+  });
+
+  test('the hand can be tidied while waiting for someone else', async ({ browser }) => {
+    await seatAndStart(browser);
+    const active = await activePlayer(players);
+    const waiting = players.find((p) => p !== active)!;
+
+    // Sorting and choosing cards must work off turn: it is what there is to do.
+    await waiting.page.getByRole('button', { name: 'Points' }).tap();
+    await expect(waiting.page.getByRole('button', { name: 'Points' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+
+    const card = waiting.page.locator('.hand__cards [data-card-id] .card').first();
+    await expect(card).toBeEnabled();
+    await card.tap();
+    await expect(waiting.page.locator('.hand__count')).toContainText('1 selected');
+  });
+
   test('the whole hand is reachable', async ({ browser }) => {
     const player = await seatAndStart(browser);
 

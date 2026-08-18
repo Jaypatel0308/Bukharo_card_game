@@ -18,7 +18,7 @@ const SEVEN = card('7', 'spades');
 function renderHand(props: Partial<React.ComponentProps<typeof Hand>> = {}) {
   const onToggle = vi.fn();
   const view = render(
-    <Hand cards={[FIVE, NINE]} wildRank={null} selectedIds={[]} onToggle={onToggle} {...props} />,
+    <Hand cards={[FIVE, NINE]} wildRank={null} selectedIds={[]} onToggle={onToggle} isYourTurn {...props} />,
   );
   return { ...view, onToggle };
 }
@@ -46,7 +46,7 @@ describe('Hand', () => {
   it('marks a drawn card as just picked up, in the label as well as the ring', () => {
     const { rerender, onToggle } = renderHand();
     rerender(
-      <Hand cards={[FIVE, NINE, SEVEN]} wildRank={null} selectedIds={[]} onToggle={onToggle} />,
+      <Hand cards={[FIVE, NINE, SEVEN]} wildRank={null} selectedIds={[]} onToggle={onToggle} isYourTurn />,
     );
     expect(labels()).toContain('7 of spades, just picked up');
     expect(labels()).toContain('5 of spades');
@@ -55,7 +55,7 @@ describe('Hand', () => {
   it('puts the drawn card in its place rather than at the end', () => {
     const { rerender, onToggle } = renderHand();
     rerender(
-      <Hand cards={[FIVE, NINE, SEVEN]} wildRank={null} selectedIds={[]} onToggle={onToggle} />,
+      <Hand cards={[FIVE, NINE, SEVEN]} wildRank={null} selectedIds={[]} onToggle={onToggle} isYourTurn />,
     );
     expect(labels()).toEqual([
       '5 of spades',
@@ -72,12 +72,12 @@ describe('Hand', () => {
   it('clears the highlight when the turn passes on', () => {
     const { rerender, onToggle } = renderHand();
     rerender(
-      <Hand cards={[FIVE, NINE, SEVEN]} wildRank={null} selectedIds={[]} onToggle={onToggle} />,
+      <Hand cards={[FIVE, NINE, SEVEN]} wildRank={null} selectedIds={[]} onToggle={onToggle} isYourTurn />,
     );
     expect(labels().some((l) => l.includes('just picked up'))).toBe(true);
 
     rerender(
-      <Hand cards={[FIVE, NINE, SEVEN]} wildRank={null} selectedIds={[]} onToggle={onToggle} disabled />,
+      <Hand cards={[FIVE, NINE, SEVEN]} wildRank={null} selectedIds={[]} onToggle={onToggle} />,
     );
     expect(labels().some((l) => l.includes('just picked up'))).toBe(false);
   });
@@ -85,7 +85,7 @@ describe('Hand', () => {
   it('shows the count and how many arrived', () => {
     const { rerender, onToggle } = renderHand();
     rerender(
-      <Hand cards={[FIVE, NINE, SEVEN]} wildRank={null} selectedIds={[]} onToggle={onToggle} />,
+      <Hand cards={[FIVE, NINE, SEVEN]} wildRank={null} selectedIds={[]} onToggle={onToggle} isYourTurn />,
     );
     expect(screen.getByText(/3 cards/)).toBeTruthy();
     expect(screen.getByText(/1 just picked up/)).toBeTruthy();
@@ -104,9 +104,17 @@ describe('Hand', () => {
     expect(screen.getByRole('button', { name: '9 of spades' }).getAttribute('aria-pressed')).toBe('false');
   });
 
-  it('disables the cards when it is not your turn', () => {
-    renderHand({ disabled: true });
+  it('stays usable when it is not your turn, so a hand can be tidied while waiting', () => {
+    const { onToggle } = renderHand({ isYourTurn: false });
     const button = screen.getByRole('button', { name: '5 of spades' }) as HTMLButtonElement;
-    expect(button.disabled).toBe(true);
+    expect(button.disabled).toBe(false);
+
+    fireEvent.click(button);
+    expect(onToggle).toHaveBeenCalledWith(FIVE.id);
+  });
+
+  it('counts what is selected, which does not depend on seeing the lift', () => {
+    renderHand({ selectedIds: [FIVE.id] });
+    expect(screen.getByText(/1 selected/)).toBeTruthy();
   });
 });

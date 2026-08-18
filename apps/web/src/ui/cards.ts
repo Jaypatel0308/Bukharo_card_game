@@ -32,10 +32,18 @@ export function cardText(card: Card): string {
   return `${card.rank}${SUIT_SYMBOL[card.suit!]}`;
 }
 
-/** Spoken by screen readers, so it must not rely on the suit glyph (§74). */
-export function cardLabel(card: Card, wildRank: NaturalRank | null): string {
-  const base = card.isJoker ? 'Joker' : `${card.rank} of ${SUIT_NAME[card.suit!]}`;
-  return isWild(card, wildRank) ? `${base}, wild` : base;
+/**
+ * Spoken by screen readers, so it must not rely on the suit glyph (§74).
+ *
+ * A wild card is deliberately not announced as wild. Marking them would take
+ * away a real decision — discarding a wild is a mistake a player is allowed to
+ * make, and one the next player profits from. The round's wild rank is shown
+ * on the table for everyone; working out which of your cards match it is part
+ * of playing, and a screen reader user gets the same information as anyone
+ * else, no more and no less.
+ */
+export function cardLabel(card: Card, _wildRank: NaturalRank | null): string {
+  return card.isJoker ? 'Joker' : `${card.rank} of ${SUIT_NAME[card.suit!]}`;
 }
 
 export function isWild(card: Card, wildRank: NaturalRank | null): boolean {

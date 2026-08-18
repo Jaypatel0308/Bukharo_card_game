@@ -1,7 +1,6 @@
 import type { Card, NaturalRank } from '@bukharo/game-engine';
 
 import { PlayingCard } from './PlayingCard';
-import { isWild } from '../ui/cards';
 
 interface Props {
   cards: Card[];
@@ -22,7 +21,6 @@ interface Props {
  */
 export function DiscardPileView({ cards, wildRank, onTake, onClose }: Props) {
   const points = cards.reduce((total, card) => total + card.basePointValue, 0);
-  const wilds = cards.filter((card) => isWild(card, wildRank)).length;
 
   return (
     <div className="sheet">
@@ -39,8 +37,7 @@ export function DiscardPileView({ cards, wildRank, onTake, onClose }: Props) {
         ) : (
           <>
             <p className="sheet__note">
-              {cards.length} card{cards.length === 1 ? '' : 's'} · {points} points
-              {wilds > 0 && ` · ${wilds} wild${wilds === 1 ? '' : 's'}`} · bottom first
+              {cards.length} card{cards.length === 1 ? '' : 's'} · {points} points · bottom first
             </p>
 
             <ol className="pileList">

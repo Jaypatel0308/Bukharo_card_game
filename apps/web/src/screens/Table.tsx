@@ -3,6 +3,7 @@ import { validateMeld, validateOpeningRun } from '@bukharo/game-engine';
 import type { Card, GameView, Seat, TeamId } from '@bukharo/game-engine';
 
 import { ActionBar } from '../components/ActionBar';
+import { ActivityStrip } from '../components/ActivityStrip';
 import { DiscardPileView } from '../components/DiscardPileView';
 import { GameLog } from '../components/GameLog';
 import { Hand } from '../components/Hand';
@@ -153,6 +154,13 @@ export function Table({ app }: { app: Bukharo }) {
         {turnMessage()}
       </p>
 
+      {room.status === 'PLAYING' && (
+        <ActivityStrip
+          game={game}
+          disconnected={new Set(room.players.filter((p) => !p.connected).map((p) => p.id))}
+        />
+      )}
+
       {waitingFor && room.status === 'PLAYING' && (
         <StalledTurn
           playerName={waitingFor.displayName}
@@ -200,7 +208,7 @@ export function Table({ app }: { app: Bukharo }) {
           cards={you.hand}
           wildRank={game.wildRank}
           selectedIds={selected}
-          disabled={!isYourTurn}
+          isYourTurn={isYourTurn}
           onToggle={(cardId) =>
             setSelected((current) =>
               current.includes(cardId) ? current.filter((id) => id !== cardId) : [...current, cardId],

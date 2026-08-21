@@ -16,7 +16,7 @@ Open site → Create room → Share code → Friends join → Sit in teams → S
 ```bash
 npm install
 npm run build
-npm test          # 214 tests: engine, server and web client
+npm test          # 269 tests: two engines, server and web client
 npm start         # http://localhost:8787
 ```
 
@@ -34,10 +34,18 @@ each tab gets its own session token).
 
 ```
 packages/game-engine   Bukharo's rules. Pure, deterministic, no I/O.
+packages/game-mindi    Mindi's rules. Likewise, and sealed off from Bukharo.
 packages/shared        Wire protocol, and the catalogue of games on offer.
 apps/server            WebSocket server, rooms, sessions, persistence.
 apps/web               React client, mobile-first.
 ```
+
+Neither engine lists the other as a dependency, so neither can import it, and
+a lint rule says so at the point of writing rather than leaving a confusing
+module error later. They share no code at all — not even a shuffle. Mindi has
+no card point values, ranks its cards differently and builds three different
+decks, so a common card model would have had to know about both games to
+describe either.
 
 ## Hosting more than one game
 
@@ -146,7 +154,8 @@ behaviour.
 
 ```bash
 npm run lint          # ESLint: bugs, not style
-npm run test:engine   # 75 deterministic rule tests, no I/O
+npm run test:engine   # 75 Bukharo rule tests, no I/O
+npm run test:mindi    # 55 Mindi rule tests, no I/O
 npm run test:server   # 50 tests against a real server process
 npm run test:web      # 89 client tests (Vitest, jsdom)
 npm run test:e2e      # 29 browser tests (Playwright: desktop and phone)

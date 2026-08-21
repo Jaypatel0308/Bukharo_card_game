@@ -1,20 +1,11 @@
 import { useState } from 'react';
-import type { Seat } from '@bukharo/shared';
-import { TARGET_SCORE_OPTIONS } from '@bukharo/shared';
+import { TARGET_SCORE_OPTIONS, describeGame, teamForPosition } from '@bukharo/shared';
 
 import { TeamNameField } from '../components/TeamNameField';
 import { ThemePicker } from '../components/ThemePicker';
 import type { Bukharo } from '../state/useBukharo';
-import { SEAT_LABEL } from '../ui/cards';
 
-const SEATS: Seat[] = ['NORTH', 'EAST', 'SOUTH', 'WEST'];
 const TEAMS: Array<'TEAM_A' | 'TEAM_B'> = ['TEAM_A', 'TEAM_B'];
-const TEAM_OF: Record<Seat, 'TEAM_A' | 'TEAM_B'> = {
-  NORTH: 'TEAM_A',
-  EAST: 'TEAM_B',
-  SOUTH: 'TEAM_A',
-  WEST: 'TEAM_B',
-};
 
 export function Lobby({ app }: { app: Bukharo }) {
   const room = app.room!;
@@ -23,8 +14,11 @@ export function Lobby({ app }: { app: Bukharo }) {
   const [copied, setCopied] = useState(false);
   const [confirmKick, setConfirmKick] = useState<string | null>(null);
 
+  const game = describeGame(room.gameId);
+  const seats = Array.from({ length: game.maxPlayers }, (_, position) => position);
   const inviteLink = `${window.location.origin}/join/${room.roomCode}`;
-  const everyoneReady = room.players.length === 4 && room.players.every((p) => p.ready);
+  const everyoneReady = room.players.length > 0 && room.players.every((p) => p.ready);
+  const canStart = everyoneReady && room.cannotStartReason === null;
   const waitingOn = room.players.filter((p) => !p.ready).map((p) => p.displayName);
 
   const share = async (): Promise<void> => {
@@ -57,16 +51,19 @@ export function Lobby({ app }: { app: Bukharo }) {
       </header>
 
       <div className="panel">
-        <h2 className="panel__title">Table</h2>
+        <h2 className="panel__title">
+          {game.name} · {room.players.length}/{game.maxPlayers}
+        </h2>
         <div className="seats">
-          {SEATS.map((seat) => {
-            const occupant = room.players.find((p) => p.seat === seat);
+          {seats.map((position) => {
+            const occupant = room.players.find((p) => p.position === position);
             const isYou = occupant?.id === room.youId;
+            const team = teamForPosition(position);
             return (
-              <div key={seat} className={`seat seat--${TEAM_OF[seat].toLowerCase()}`}>
+              <div key={position} className={`seat seat--${team.toLowerCase()}`}>
                 <div className="seat__meta">
-                  <span className="seat__position">{SEAT_LABEL[seat]}</span>
-                  <span className="seat__team">{room.teamNames[TEAM_OF[seat]]}</span>
+                  <span className="seat__position">{game.seatLabel(position, game.maxPlayers)}</span>
+                  <span className="seat__team">{room.teamNames[team]}</span>
                 </div>
                 {occupant ? (
                   <div className="seat__player">
@@ -94,8 +91,8 @@ export function Lobby({ app }: { app: Bukharo }) {
                   <button
                     type="button"
                     className="seat__empty"
-                    onClick={() => app.chooseSeat(seat)}
-                    aria-label={`Sit at ${SEAT_LABEL[seat]}`}
+                    onClick={() => app.choosePosition(position)}
+                    aria-label={`Sit at ${game.seatLabel(position, game.maxPlayers)}`}
                   >
                     Empty — tap to sit here
                   </button>
@@ -168,18 +165,16 @@ export function Lobby({ app }: { app: Bukharo }) {
           <button
             type="button"
             className="button button--primary button--block"
-            disabled={!everyoneReady}
+            disabled={!canStart}
             onClick={app.startGame}
           >
             Start match
           </button>
         )}
 
-        {!everyoneReady && (
+        {!canStart && (
           <p className="hint" role="status">
-            {room.players.length < 4
-              ? `Waiting for ${4 - room.players.length} more player${4 - room.players.length === 1 ? '' : 's'}.`
-              : `Waiting for ${waitingOn.join(', ')}.`}
+            {room.cannotStartReason ?? `Waiting for ${waitingOn.join(', ')}.`}
           </p>
         )}
 

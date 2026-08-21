@@ -4,11 +4,11 @@ import fsp from 'node:fs/promises';
 import path from 'node:path';
 
 import { WebSocketServer, type WebSocket } from 'ws';
-import type { ClientMessage, ServerError, ServerMessage } from '@bukharo/shared';
+import { DEFAULT_GAME, type ClientMessage, type ServerError, type ServerMessage } from '@bukharo/shared';
 
 import { config } from './config.js';
 import { RoomManager, roomView, type OpResult } from './rooms.js';
-import { asSeat, asTeamId, asWildAssignments } from './validate.js';
+import { asGameId, asPosition, asTeamId, asWildAssignments } from './validate.js';
 
 interface Connection {
   ws: WebSocket;
@@ -201,7 +201,8 @@ async function handleMessage(connection: Connection, message: ClientMessage): Pr
       return;
 
     case 'room:create': {
-      const result = await manager.createRoom(message.displayName, message.targetScore);
+      const gameId = asGameId(message.gameId) ?? DEFAULT_GAME;
+      const result = await manager.createRoom(message.displayName, message.targetScore, gameId);
       const value = handleResult(ws, result, message.actionId);
       if (!value) return;
       await attach(connection, value.room.id, value.playerId, value.sessionToken);
@@ -257,22 +258,22 @@ async function handleMessage(connection: Connection, message: ClientMessage): Pr
       return;
     }
     case 'seat:choose': {
-      const seat = asSeat(message.seat);
-      if (!seat) {
+      const position = asPosition(message.position);
+      if (position === null) {
         sendError(ws, { code: 'INVALID_MESSAGE', message: 'That is not a seat at this table.' });
         return;
       }
-      const result = await manager.chooseSeat(roomId, playerId, seat);
+      const result = await manager.choosePosition(roomId, playerId, position);
       if (handleResult(ws, result)) broadcastRoom(roomId);
       return;
     }
     case 'host:assignSeat': {
-      const seat = asSeat(message.seat);
-      if (!seat || typeof message.playerId !== 'string') {
+      const position = asPosition(message.position);
+      if (position === null || typeof message.playerId !== 'string') {
         sendError(ws, { code: 'INVALID_MESSAGE', message: 'That is not a seat at this table.' });
         return;
       }
-      const result = await manager.assignSeat(roomId, playerId, message.playerId, seat);
+      const result = await manager.assignPosition(roomId, playerId, message.playerId, position);
       if (handleResult(ws, result)) broadcastRoom(roomId);
       return;
     }

@@ -2,8 +2,8 @@ import { createHash, randomBytes } from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
-import type { GameState, RuleConfig, Seat, TeamId } from '@bukharo/game-engine';
-import type { RoomStatus } from '@bukharo/shared';
+import type { GameState, RuleConfig, TeamId } from '@bukharo/game-engine';
+import type { GameId, RoomStatus } from '@bukharo/shared';
 
 /**
  * Server-side room record. This is the persisted shape — it contains hands and
@@ -12,7 +12,8 @@ import type { RoomStatus } from '@bukharo/shared';
 export interface RoomPlayer {
   id: string;
   displayName: string;
-  seat: Seat | null;
+  /** Place in the ring, 0-based. Teams alternate: even is A, odd is B. */
+  position: number | null;
   ready: boolean;
   isHost: boolean;
   connected: boolean;
@@ -22,9 +23,18 @@ export interface RoomPlayer {
   sessionTokenHash: string;
 }
 
+/**
+ * Bumped whenever the persisted shape changes in a way older files cannot
+ * satisfy. A room written by an earlier version is dropped on load rather than
+ * resurrected half-formed.
+ */
+export const ROOM_SCHEMA_VERSION = 2;
+
 export interface Room {
   id: string;
+  schemaVersion: number;
   code: string;
+  gameId: GameId;
   status: RoomStatus;
   targetScore: number;
   rules: RuleConfig;
@@ -91,7 +101,10 @@ export class FileStore implements Store {
       if (!file.endsWith('.json')) continue;
       try {
         const raw = await fs.readFile(path.join(this.dir, file), 'utf8');
-        rooms.push(JSON.parse(raw) as Room);
+        const room = JSON.parse(raw) as Room;
+        // A room from an older build cannot be trusted to have the fields this
+        // one relies on, so it is left behind rather than half-restored.
+        if (room.schemaVersion === ROOM_SCHEMA_VERSION) rooms.push(room);
       } catch {
         // A truncated file from a hard kill: skip it rather than refuse to boot.
       }

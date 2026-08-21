@@ -56,6 +56,48 @@ export default tseslint.config(
     },
   },
 
+  /*
+   * Game engines are sealed off from each other.
+   *
+   * Neither package lists the other as a dependency, so an import would fail
+   * to resolve anyway — but a lint error says why, at the moment it is
+   * written, rather than as a confusing module-not-found later.
+   */
+  {
+    files: ['packages/game-mindi/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@bukharo/game-engine', '@bukharo/game-engine/*', '**/game-engine/*'],
+              message:
+                'Mindi must not reach into Bukharo. The two games share nothing but the room they are played in.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['packages/game-engine/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@bukharo/game-mindi', '@bukharo/game-mindi/*', '**/game-mindi/*'],
+              message:
+                'Bukharo must not reach into Mindi. The two games share nothing but the room they are played in.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+
   // ---- Node: engine, shared protocol, server ----
   {
     files: ['packages/**/*.ts', 'apps/server/**/*.ts'],

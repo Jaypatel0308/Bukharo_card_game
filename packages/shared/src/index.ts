@@ -8,7 +8,10 @@ import type {
   WildAssignment,
 } from '@bukharo/game-engine';
 
+import type { GameId } from './games.js';
+
 export type { GameView, RuleConfig, Seat, TeamId, WildAssignment };
+export * from './games.js';
 
 /** §32 — no O/0 or I/1/l, so codes survive being read aloud. */
 export const ROOM_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -19,7 +22,10 @@ export type RoomStatus = 'LOBBY' | 'PLAYING' | 'ROUND_END' | 'MATCH_END' | 'ABAN
 export interface RoomPlayerView {
   id: string;
   displayName: string;
-  seat: Seat | null;
+  /** Place in the ring, 0-based. Teams alternate, so even is A and odd is B. */
+  position: number | null;
+  /** What to call that place in this game, e.g. "North" or "Seat 3". */
+  seatLabel: string | null;
   teamId: TeamId | null;
   connected: boolean;
   ready: boolean;
@@ -29,6 +35,8 @@ export interface RoomPlayerView {
 export interface RoomView {
   roomId: string;
   roomCode: string;
+  /** Which game this room is for. Fixed when the room is made. */
+  gameId: GameId;
   status: RoomStatus;
   targetScore: number;
   hostId: string | null;
@@ -40,6 +48,8 @@ export interface RoomView {
   rules: RuleConfig;
   /** Seat the viewer occupies, if any. */
   youId: string | null;
+  /** Null when the host may start, otherwise why they may not. */
+  cannotStartReason: string | null;
   /** Set while an active player is disconnected and the table is waiting (§54). */
   waitingForPlayerId: string | null;
   /** When that wait began, so the client can show the host when they may skip. */
@@ -63,13 +73,19 @@ export interface GameActionPayload {
 }
 
 export type ClientMessage =
-  | { type: 'room:create'; actionId: string; displayName: string; targetScore: number }
+  | {
+      type: 'room:create';
+      actionId: string;
+      displayName: string;
+      targetScore: number;
+      gameId: GameId;
+    }
   | { type: 'room:join'; actionId: string; displayName: string; roomCode: string }
   | { type: 'session:resume'; sessionToken: string }
   | { type: 'room:leave' }
   | { type: 'player:ready'; ready: boolean }
-  | { type: 'seat:choose'; seat: Seat }
-  | { type: 'host:assignSeat'; playerId: string; seat: Seat }
+  | { type: 'seat:choose'; position: number }
+  | { type: 'host:assignSeat'; playerId: string; position: number }
   | { type: 'host:kick'; playerId: string }
   | { type: 'host:settings'; targetScore: number }
   | { type: 'host:teamName'; teamId: TeamId; name: string }

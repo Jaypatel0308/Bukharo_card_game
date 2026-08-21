@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type {
   GameActionPayload,
+  GameId,
   RoomView,
-  Seat,
   ServerError,
   TeamId,
   ServerMessage,
@@ -39,12 +39,12 @@ export interface Bukharo {
   pendingWild: PendingWildChoice | null;
   cancelWildChoice(): void;
 
-  createRoom(displayName: string, targetScore: number): void;
+  createRoom(displayName: string, targetScore: number, gameId: GameId): void;
   joinRoom(displayName: string, roomCode: string): void;
   leaveRoom(): void;
   setReady(ready: boolean): void;
-  chooseSeat(seat: Seat): void;
-  assignSeat(playerId: string, seat: Seat): void;
+  choosePosition(position: number): void;
+  assignPosition(playerId: string, position: number): void;
   kickPlayer(playerId: string): void;
   setTargetScore(targetScore: number): void;
   setTeamName(teamId: TeamId, name: string): void;
@@ -172,8 +172,8 @@ export function useBukharo(): Bukharo {
       pendingWild,
       cancelWildChoice: () => setPendingWild(null),
 
-      createRoom: (displayName, targetScore) =>
-        send({ type: 'room:create', actionId: newActionId(), displayName, targetScore }),
+      createRoom: (displayName, targetScore, gameId) =>
+        send({ type: 'room:create', actionId: newActionId(), displayName, targetScore, gameId }),
       joinRoom: (displayName, roomCode) =>
         send({ type: 'room:join', actionId: newActionId(), displayName, roomCode: roomCode.toUpperCase() }),
       leaveRoom: () => {
@@ -181,8 +181,8 @@ export function useBukharo(): Bukharo {
         clearSessionToken();
       },
       setReady: (ready) => send({ type: 'player:ready', ready }),
-      chooseSeat: (seat) => send({ type: 'seat:choose', seat }),
-      assignSeat: (playerId, seat) => send({ type: 'host:assignSeat', playerId, seat }),
+      choosePosition: (position) => send({ type: 'seat:choose', position }),
+      assignPosition: (playerId, position) => send({ type: 'host:assignSeat', playerId, position }),
       kickPlayer: (playerId) => send({ type: 'host:kick', playerId }),
       setTargetScore: (targetScore) => send({ type: 'host:settings', targetScore }),
       setTeamName: (teamId, name) => send({ type: 'host:teamName', teamId, name }),

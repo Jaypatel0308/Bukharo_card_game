@@ -119,7 +119,13 @@ after(async () => {
 /** Seats four players and returns them in seat order with the host first. */
 async function seatFour() {
   const host = await new Client('host').connect();
-  host.send({ type: 'room:create', actionId: 'a1', displayName: 'Rahul', targetScore: 2000 });
+  host.send({
+    type: 'room:create',
+    actionId: 'a1',
+    displayName: 'Rahul',
+    targetScore: 2000,
+    gameId: 'bukharo',
+  });
   await host.waitFor((m) => m.type === 'session');
   const code = host.session.roomCode;
 
@@ -187,6 +193,52 @@ describe('rooms over websockets', () => {
     await startMatch(all, host);
     assert.equal(host.room.game.teams.TEAM_A.name, 'Rockets');
     for (const client of all) client.close();
+  });
+
+  it('turns away a fifth player, naming the game that is full', async () => {
+    const { host, all, code } = await seatFour();
+
+    const late = await new Client('Nina').connect();
+    late.send({ type: 'room:join', actionId: 'late', displayName: 'Nina', roomCode: code });
+    const error = await late.waitFor((m) => m.type === 'error');
+
+    assert.equal(error.error.code, 'ROOM_FULL');
+    assert.match(error.error.message, /Bukharo seats 4/);
+    assert.equal(host.room.players.length, 4);
+
+    late.close();
+    for (const client of all) client.close();
+  });
+
+  it('seats players in order and alternates the teams', async () => {
+    const { host, all } = await seatFour();
+    const seated = [...host.room.players].sort((a, b) => a.position - b.position);
+
+    assert.deepEqual(seated.map((p) => p.position), [0, 1, 2, 3]);
+    assert.deepEqual(seated.map((p) => p.teamId), ['TEAM_A', 'TEAM_B', 'TEAM_A', 'TEAM_B']);
+    assert.deepEqual(seated.map((p) => p.seatLabel), ['North', 'East', 'South', 'West']);
+
+    for (const client of all) client.close();
+  });
+
+  it('tells the host exactly what a short table needs', async () => {
+    const host = await new Client('Rahul').connect();
+    host.send({
+      type: 'room:create',
+      actionId: 'short',
+      displayName: 'Rahul',
+      targetScore: 2000,
+      gameId: 'bukharo',
+    });
+    const room = await host.waitForState((r) => r.players.length === 1);
+
+    assert.equal(room.gameId, 'bukharo');
+    assert.match(room.cannotStartReason, /needs 4 players\. You have 1 — 3 more to go/);
+
+    host.send({ type: 'game:start', actionId: 'nope' });
+    const error = await host.waitFor((m) => m.type === 'error');
+    assert.equal(error.error.code, 'NOT_READY');
+    host.close();
   });
 
   it('refuses to start until everyone is ready', async () => {

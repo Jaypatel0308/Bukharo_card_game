@@ -190,3 +190,40 @@
     grid-template-columns: 1fr 1fr;
   }
 }
+
+/* Game picker on the home screen. */
+
+.gamePicker {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.gameChoice {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-height: var(--tap);
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--ink-dim);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.gameChoice.is-active {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--ink);
+}
+
+.gameChoice__name {
+  font-weight: 700;
+}
+
+.gameChoice__tagline {
+  font-size: 0.8rem;
+  color: var(--ink-dim);
+}

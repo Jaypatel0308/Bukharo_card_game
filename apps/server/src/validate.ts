@@ -1,4 +1,5 @@
-import { SEAT_ORDER, type Seat, type TeamId, type WildAssignment } from '@bukharo/game-engine';
+import type { TeamId, WildAssignment } from '@bukharo/game-engine';
+import { GAMES, isGameId, type GameId } from '@bukharo/shared';
 
 /**
  * Runtime validation of everything a client sends.
@@ -9,13 +10,19 @@ import { SEAT_ORDER, type Seat, type TeamId, type WildAssignment } from '@bukhar
  * "MIDDLE_OF_THE_TABLE" gets a refusal, not a player with no team.
  */
 
-const SEATS = new Set<string>(SEAT_ORDER);
 const TEAM_IDS = new Set<string>(['TEAM_A', 'TEAM_B']);
 const RANKS = new Set<string>(['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']);
 const SUITS = new Set<string>(['clubs', 'diamonds', 'hearts', 'spades']);
 
-export function asSeat(value: unknown): Seat | null {
-  return typeof value === 'string' && SEATS.has(value) ? (value as Seat) : null;
+/** A place at the table, bounded by the largest table any game offers. */
+export function asPosition(value: unknown): number | null {
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < 0) return null;
+  const largestTable = Math.max(...Object.values(GAMES).map((game) => game.maxPlayers));
+  return value < largestTable ? value : null;
+}
+
+export function asGameId(value: unknown): GameId | null {
+  return isGameId(value) ? value : null;
 }
 
 export function asTeamId(value: unknown): TeamId | null {

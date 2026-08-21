@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { TARGET_SCORE_OPTIONS } from '@bukharo/shared';
+import { GAME_IDS, GAMES, TARGET_SCORE_OPTIONS, type GameId } from '@bukharo/shared';
 
 import { ThemePicker } from '../components/ThemePicker';
 import type { Bukharo } from '../state/useBukharo';
@@ -19,6 +19,7 @@ export function Home({ app }: { app: Bukharo }) {
   });
   const [code, setCode] = useState(initialCode);
   const [targetScore, setTargetScore] = useState(2000);
+  const [gameId, setGameId] = useState<GameId>(GAME_IDS[0]!);
 
   const remember = (value: string): void => {
     try {
@@ -33,7 +34,7 @@ export function Home({ app }: { app: Bukharo }) {
     const trimmed = name.trim();
     if (!trimmed) return;
     remember(trimmed);
-    if (mode === 'create') app.createRoom(trimmed, targetScore);
+    if (mode === 'create') app.createRoom(trimmed, targetScore, gameId);
     else app.joinRoom(trimmed, code.trim());
   };
 
@@ -96,22 +97,44 @@ export function Home({ app }: { app: Bukharo }) {
               />
             </label>
           ) : (
-            <fieldset className="field">
-              <legend className="field__label">Play to</legend>
-              <div className="segmented">
-                {TARGET_SCORE_OPTIONS.map((value) => (
-                  <button
-                    key={value}
-                    type="button"
-                    className={`segmented__item ${targetScore === value ? 'is-active' : ''}`}
-                    aria-pressed={targetScore === value}
-                    onClick={() => setTargetScore(value)}
-                  >
-                    {value.toLocaleString()}
-                  </button>
-                ))}
-              </div>
-            </fieldset>
+            <>
+              {GAME_IDS.length > 1 && (
+                <fieldset className="field">
+                  <legend className="field__label">Game</legend>
+                  <div className="gamePicker">
+                    {GAME_IDS.map((id) => (
+                      <button
+                        key={id}
+                        type="button"
+                        className={`gameChoice ${gameId === id ? 'is-active' : ''}`}
+                        aria-pressed={gameId === id}
+                        onClick={() => setGameId(id)}
+                      >
+                        <span className="gameChoice__name">{GAMES[id].name}</span>
+                        <span className="gameChoice__tagline">{GAMES[id].tagline}</span>
+                      </button>
+                    ))}
+                  </div>
+                </fieldset>
+              )}
+
+              <fieldset className="field">
+                <legend className="field__label">Play to</legend>
+                <div className="segmented">
+                  {TARGET_SCORE_OPTIONS.map((value) => (
+                    <button
+                      key={value}
+                      type="button"
+                      className={`segmented__item ${targetScore === value ? 'is-active' : ''}`}
+                      aria-pressed={targetScore === value}
+                      onClick={() => setTargetScore(value)}
+                    >
+                      {value.toLocaleString()}
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
+            </>
           )}
 
           <button className="button button--primary button--block" type="submit" disabled={!canSubmit}>

@@ -16,7 +16,7 @@ Open site → Create room → Share code → Friends join → Sit in teams → S
 ```bash
 npm install
 npm run build
-npm test          # 201 tests: engine, server and web client
+npm test          # 214 tests: engine, server and web client
 npm start         # http://localhost:8787
 ```
 
@@ -33,11 +33,25 @@ each tab gets its own session token).
 ## Layout
 
 ```
-packages/game-engine   Pure, deterministic rule engine. No I/O, no framework.
-packages/shared        Wire protocol shared by server and client.
+packages/game-engine   Bukharo's rules. Pure, deterministic, no I/O.
+packages/shared        Wire protocol, and the catalogue of games on offer.
 apps/server            WebSocket server, rooms, sessions, persistence.
 apps/web               React client, mobile-first.
 ```
+
+## Hosting more than one game
+
+The room layer knows almost nothing about the game being played. A game is
+described in `packages/shared/src/games.ts` by what a *room* needs: how many
+people may sit down, which counts a match may start with, and what to call each
+seat. Cards, turns and scoring stay sealed inside the game's own engine, which
+the room, session, presence and persistence code never reads.
+
+Seats are positions in a ring, `0..n-1`, and a position's team is simply whether
+it is even or odd — which gives alternating seating and equal sides at any even
+table size. Bukharo seats exactly four; a game listing several sizes blocks the
+start on the ones it cannot use, and the lobby says what is missing rather than
+just refusing.
 
 The engine is the heart of the project and is testable without a browser or a
 socket. Nothing in `apps/web` decides whether a move is legal.
@@ -133,7 +147,7 @@ behaviour.
 ```bash
 npm run lint          # ESLint: bugs, not style
 npm run test:engine   # 75 deterministic rule tests, no I/O
-npm run test:server   # 37 tests against a real server process
+npm run test:server   # 50 tests against a real server process
 npm run test:web      # 89 client tests (Vitest, jsdom)
 npm run test:e2e      # 29 browser tests (Playwright: desktop and phone)
 ```

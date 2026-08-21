@@ -5,7 +5,6 @@ import {
   DEFAULT_TEAM_NAMES,
   forceSkipTurn,
   SEAT_ORDER,
-  SEAT_TEAMS,
   applyAction,
   createMatch,
   cryptoRng,
@@ -19,11 +18,16 @@ import {
   type TeamId,
 } from '@bukharo/game-engine';
 import {
+  DEFAULT_GAME,
   MAX_TARGET_SCORE,
   MIN_TARGET_SCORE,
   ROOM_CODE_ALPHABET,
   ROOM_CODE_LENGTH,
+  describeGame,
+  teamForPosition,
+  whyCannotStart,
   type GameActionPayload,
+  type GameId,
   type RoomView,
   type ServerError,
   type ServerErrorCode,
@@ -32,6 +36,7 @@ import {
 import { config } from './config.js';
 import {
   FileStore,
+  ROOM_SCHEMA_VERSION,
   hashToken,
   newId,
   newSessionToken,
@@ -144,7 +149,11 @@ export class RoomManager {
   /* Lobby                                                             */
   /* ---------------------------------------------------------------- */
 
-  async createRoom(displayName: string, targetScore: number): Promise<OpResult<JoinResult>> {
+  async createRoom(
+    displayName: string,
+    targetScore: number,
+    gameId: GameId = DEFAULT_GAME,
+  ): Promise<OpResult<JoinResult>> {
     const name = cleanName(displayName);
     if (!name) return fail('NAME_REQUIRED', 'Please enter a display name.');
 
@@ -153,7 +162,7 @@ export class RoomManager {
     const player: RoomPlayer = {
       id: newId('player'),
       displayName: name,
-      seat: SEAT_ORDER[0]!,
+      position: 0,
       ready: false,
       isHost: true,
       connected: true,
@@ -163,6 +172,8 @@ export class RoomManager {
     };
     const room: Room = {
       id: newId('room'),
+      schemaVersion: ROOM_SCHEMA_VERSION,
+      gameId,
       code: this.generateRoomCode(),
       status: 'LOBBY',
       targetScore: clampTarget(targetScore),
@@ -199,18 +210,22 @@ export class RoomManager {
           'That match has already started. Ask the host for an invite, or rejoin from the device you were playing on.',
         );
       }
-      if (room.players.length >= 4) {
-        return fail('ROOM_FULL', 'That room already has four players.');
+      const game = describeGame(room.gameId);
+      if (room.players.length >= game.maxPlayers) {
+        return fail(
+          'ROOM_FULL',
+          `That room is full — ${game.name} seats ${game.maxPlayers} players.`,
+        );
       }
 
       const now = Date.now();
       const token = newSessionToken();
-      const takenSeats = new Set(room.players.map((p) => p.seat));
-      const seat = SEAT_ORDER.find((s) => !takenSeats.has(s)) ?? null;
+      const taken = new Set(room.players.map((p) => p.position));
+      const position = firstFreePosition(taken, game.maxPlayers);
       const player: RoomPlayer = {
         id: newId('player'),
         displayName: uniqueName(room, name),
-        seat,
+        position,
         ready: false,
         isHost: false,
         connected: true,
@@ -233,33 +248,37 @@ export class RoomManager {
     });
   }
 
-  async chooseSeat(roomId: string, playerId: string, seat: Seat): Promise<OpResult<Room>> {
-    if (!SEAT_ORDER.includes(seat)) return fail('INVALID_MESSAGE', 'That is not a seat at this table.');
+  async choosePosition(roomId: string, playerId: string, position: number): Promise<OpResult<Room>> {
     return this.mutate(roomId, playerId, (room, player) => {
       if (room.status !== 'LOBBY') return fail('ROOM_IN_PROGRESS', 'Seats are locked once the match starts.');
-      const occupant = room.players.find((p) => p.seat === seat && p.id !== player.id);
+      if (!isSeatable(room, position)) {
+        return fail('INVALID_MESSAGE', 'That is not a seat at this table.');
+      }
+      const occupant = room.players.find((p) => p.position === position && p.id !== player.id);
       if (occupant) return fail('SEAT_TAKEN', `${occupant.displayName} is already sitting there.`);
-      player.seat = seat;
+      player.position = position;
       return { ok: true as const, value: room };
     });
   }
 
-  async assignSeat(
+  async assignPosition(
     roomId: string,
     hostId: string,
     targetPlayerId: string,
-    seat: Seat,
+    position: number,
   ): Promise<OpResult<Room>> {
-    if (!SEAT_ORDER.includes(seat)) return fail('INVALID_MESSAGE', 'That is not a seat at this table.');
     return this.mutate(roomId, hostId, (room, host) => {
       if (!host.isHost) return fail('NOT_HOST', 'Only the host can move players.');
       if (room.status !== 'LOBBY') return fail('ROOM_IN_PROGRESS', 'Seats are locked once the match starts.');
+      if (!isSeatable(room, position)) {
+        return fail('INVALID_MESSAGE', 'That is not a seat at this table.');
+      }
       const target = room.players.find((p) => p.id === targetPlayerId);
       if (!target) return fail('NOT_IN_ROOM', 'That player is no longer in the room.');
       // Swap rather than evict, so the table never ends up with an empty seat.
-      const occupant = room.players.find((p) => p.seat === seat && p.id !== target.id);
-      if (occupant) occupant.seat = target.seat;
-      target.seat = seat;
+      const occupant = room.players.find((p) => p.position === position && p.id !== target.id);
+      if (occupant) occupant.position = target.position;
+      target.position = position;
       return { ok: true as const, value: room };
     });
   }
@@ -314,11 +333,11 @@ export class RoomManager {
       if (alreadyProcessed(room, actionId)) return { ok: true as const, value: room };
       if (!host.isHost) return fail('NOT_HOST', 'Only the host can start the match.');
       if (room.status !== 'LOBBY') return fail('ROOM_IN_PROGRESS', 'The match has already started.');
-      if (room.players.length !== 4) {
-        return fail('NOT_READY', 'Bukharo needs exactly four players before the match can start.');
-      }
-      const seats = room.players.map((p) => p.seat);
-      if (seats.some((s) => s === null) || new Set(seats).size !== 4) {
+      const blocked = whyCannotStart(describeGame(room.gameId), room.players.length);
+      if (blocked) return fail('NOT_READY', blocked);
+
+      const positions = room.players.map((p) => p.position);
+      if (positions.some((p) => p === null) || new Set(positions).size !== positions.length) {
         return fail('NOT_READY', 'Every player needs their own seat before the match can start.');
       }
       const waiting = room.players.filter((p) => !p.ready);
@@ -328,7 +347,7 @@ export class RoomManager {
 
       room.game = createMatch({
         roomId: room.id,
-        seats: room.players.map((p) => ({ id: p.id, displayName: p.displayName, seat: p.seat! })),
+        seats: bukharoSeating(room),
         targetScore: room.targetScore,
         rules: room.rules,
         rng,
@@ -365,7 +384,7 @@ export class RoomManager {
       }
       room.game = createMatch({
         roomId: room.id,
-        seats: room.players.map((p) => ({ id: p.id, displayName: p.displayName, seat: p.seat! })),
+        seats: bukharoSeating(room),
         targetScore: room.targetScore,
         rules: room.rules,
         rng,
@@ -584,6 +603,35 @@ function ensureReachableHost(room: Room): void {
   for (const player of room.players) player.isHost = player.id === heir.id;
 }
 
+/** The lowest place nobody has taken. */
+function firstFreePosition(taken: Set<number | null>, maxPlayers: number): number | null {
+  for (let position = 0; position < maxPlayers; position++) {
+    if (!taken.has(position)) return position;
+  }
+  return null;
+}
+
+function isSeatable(room: Room, position: number): boolean {
+  return (
+    Number.isInteger(position) && position >= 0 && position < describeGame(room.gameId).maxPlayers
+  );
+}
+
+/**
+ * Bukharo's engine speaks in compass seats. The room speaks in positions, so
+ * they are translated here — the one place that knows both — keeping the
+ * engine's own vocabulary out of the room layer.
+ */
+function bukharoSeating(room: Room): Array<{ id: string; displayName: string; seat: Seat }> {
+  return [...room.players]
+    .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+    .map((player, index) => ({
+      id: player.id,
+      displayName: player.displayName,
+      seat: SEAT_ORDER[index]!,
+    }));
+}
+
 function cleanName(name: string): string {
   return name.replace(/\s+/g, ' ').trim().slice(0, 20);
 }
@@ -666,6 +714,7 @@ export function roomView(room: Room, viewerId: string | null): RoomView {
   return {
     roomId: room.id,
     roomCode: room.code,
+    gameId: room.gameId,
     status: room.status,
     targetScore: room.targetScore,
     hostId: room.players.find((p) => p.isHost)?.id ?? null,
@@ -673,8 +722,12 @@ export function roomView(room: Room, viewerId: string | null): RoomView {
     players: room.players.map((player) => ({
       id: player.id,
       displayName: player.displayName,
-      seat: player.seat,
-      teamId: player.seat ? SEAT_TEAMS[player.seat] : null,
+      position: player.position,
+      seatLabel:
+        player.position === null
+          ? null
+          : describeGame(room.gameId).seatLabel(player.position, room.players.length),
+      teamId: player.position === null ? null : teamForPosition(player.position),
       connected: player.connected,
       ready: player.ready,
       isHost: player.isHost,
@@ -682,6 +735,10 @@ export function roomView(room: Room, viewerId: string | null): RoomView {
     game: room.game ? viewFor(room.game, viewerId) : null,
     rules: room.rules,
     youId: viewerId,
+    cannotStartReason:
+      room.status === 'LOBBY'
+        ? whyCannotStart(describeGame(room.gameId), room.players.length)
+        : null,
     waitingForPlayerId: room.waitingForPlayerId,
     waitingSince: room.waitingSince,
     disconnectGraceMs: config.disconnectGraceMs,

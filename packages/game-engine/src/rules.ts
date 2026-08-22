@@ -62,7 +62,13 @@ export interface RuleConfig {
   roundWildEnabled: boolean;
   /** A round-wild-rank card may be played as its face value, keeping a meld clean. UNCONFIRMED (§99.5). */
   wildRankCardCanBeUsedNaturally: boolean;
-  /** What to do when the mid-stock reveal is a Joker. UNCONFIRMED (§99.2). */
+  /**
+   * What to do when the mid-stock reveal is a Joker.
+   *
+   * REDRAW — confirmed: the Joker goes back into the stock and another card is
+   * drawn at random. ACE_IS_WILD keeps the old reading, where the Joker stands
+   * and Aces become the wild rank.
+   */
   jokerWildRevealPolicy: 'REDRAW' | 'ACE_IS_WILD';
 
   /* Runs */
@@ -70,7 +76,7 @@ export interface RuleConfig {
   aceLowInRuns: boolean;
   /** Q-K-A permitted. UNCONFIRMED (§99.7). */
   aceHighInRuns: boolean;
-  /** K-A-2 permitted. UNCONFIRMED (§99.9). */
+  /** K-A-2 permitted. Confirmed: not allowed. */
   runsWrapAround: boolean;
 
   /* Stock */

@@ -151,6 +151,10 @@ describe('surviving a restart (§61)', () => {
     const active = clients.find((c) => c.room.youId === currentId);
     active.send({ type: 'game:action', actionId: 'd1', action: { type: 'DRAW_STOCK' } });
     await active.waitForState((r) => r.game?.view.turnPhase === 'PLAYING_CARDS');
+    // The baseline is read from the host's socket, so wait for that one too.
+    // Reading one client's state after waiting on another's compares the
+    // restored server against a moment that never existed for anybody.
+    await host.waitForState((r) => r.game?.view.turnPhase === 'PLAYING_CARDS');
 
     const before = {
       roomCode: host.room.roomCode,
@@ -168,8 +172,18 @@ describe('surviving a restart (§61)', () => {
 
     // --- restart ---
     await stopServer();
-    const files = await fs.readdir(path.join(dataDir, 'rooms'));
-    assert.equal(files.filter((f) => f.endsWith('.json')).length, 1, 'the room should be on disk');
+    const files = (await fs.readdir(path.join(dataDir, 'rooms'))).filter((f) => f.endsWith('.json'));
+    assert.equal(files.length, 1, 'the room should be on disk');
+
+    // Check the file itself before trusting what comes back from it: if this
+    // fails, the fault is in writing rather than in reading.
+    const stored = JSON.parse(await fs.readFile(path.join(dataDir, 'rooms', files[0]), 'utf8'));
+    assert.equal(
+      stored.game.turnPhase,
+      before.turnPhase,
+      'the drawn card should have reached the disk before the server stopped',
+    );
+
     await startServer();
 
     // --- after the restart ---

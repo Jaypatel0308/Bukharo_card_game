@@ -13,7 +13,13 @@ export async function openPlayer(browser: Browser, name: string): Promise<Player
   return { name, page };
 }
 
-export async function createRoom(player: Player, target = '2,000'): Promise<string> {
+export async function createRoom(
+  player: Player,
+  target = '2,000',
+  game = 'Bukharo',
+): Promise<string> {
+  // Hosting starts by choosing a game; the setup form is that game's own.
+  await player.page.getByRole('button', { name: new RegExp(`^${game}`) }).click();
   await player.page.getByLabel('Your name').fill(player.name);
   await player.page.getByRole('button', { name: target, exact: true }).click();
   await player.page.getByRole('button', { name: 'Create room' }).click();
@@ -24,7 +30,8 @@ export async function createRoom(player: Player, target = '2,000'): Promise<stri
 }
 
 export async function joinRoom(player: Player, code: string): Promise<void> {
-  await player.page.getByRole('tab', { name: 'Join room' }).click();
+  // A joiner never picks a game — the room code decides it.
+  await player.page.getByRole('button', { name: 'Join a room instead' }).click();
   await player.page.getByLabel('Your name').fill(player.name);
   await player.page.getByLabel('Room code').fill(code);
   await player.page.getByRole('button', { name: 'Join game' }).click();

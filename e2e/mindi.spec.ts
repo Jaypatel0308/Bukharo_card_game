@@ -11,8 +11,9 @@ import { openPlayer, type Player } from './table';
  */
 
 async function createMindiRoom(player: Player): Promise<string> {
-  await player.page.getByLabel('Your name').fill(player.name);
+  // The game is chosen first; the name field belongs to that game's setup.
   await player.page.getByRole('button', { name: /^Mindi/ }).click();
+  await player.page.getByLabel('Your name').fill(player.name);
   await player.page.getByRole('button', { name: 'Create room' }).click();
   const code = player.page.locator('.lobby__code');
   await expect(code).toBeVisible();
@@ -20,7 +21,7 @@ async function createMindiRoom(player: Player): Promise<string> {
 }
 
 async function joinMindiRoom(player: Player, code: string): Promise<void> {
-  await player.page.getByRole('tab', { name: 'Join room' }).click();
+  await player.page.getByRole('button', { name: 'Join a room instead' }).click();
   await player.page.getByLabel('Your name').fill(player.name);
   await player.page.getByLabel('Room code').fill(code);
   await player.page.getByRole('button', { name: 'Join game' }).click();

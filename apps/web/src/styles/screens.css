@@ -193,37 +193,83 @@
 
 /* Game picker on the home screen. */
 
-.gamePicker {
+/* The game picker: one card per game, tapped to choose. */
+.gameList {
   display: grid;
-  gap: 0.5rem;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
-.gameChoice {
+.gameCard {
   display: flex;
+  width: 100%;
   flex-direction: column;
-  gap: 0.15rem;
+  gap: 0.3rem;
   min-height: var(--tap);
-  padding: 0.6rem 0.8rem;
+  padding: 0.9rem 1rem;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: transparent;
-  color: var(--ink-dim);
+  color: var(--ink);
   font: inherit;
   text-align: left;
   cursor: pointer;
 }
 
-.gameChoice.is-active {
-  border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 14%, transparent);
-  color: var(--ink);
+.gameCard:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
-.gameChoice__name {
+@media (hover: hover) and (pointer: fine) {
+  .gameCard:not(:disabled):hover {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+  }
+}
+
+.gameCard__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.gameCard__name {
+  font-size: 1.1rem;
   font-weight: 700;
 }
 
-.gameChoice__tagline {
-  font-size: 0.8rem;
+.gameCard__players {
+  flex: none;
+  font-size: 0.75rem;
   color: var(--ink-dim);
+}
+
+.gameCard__tagline {
+  font-size: 0.85rem;
+  color: var(--ink-dim);
+}
+
+.panel--quiet {
+  display: grid;
+  gap: 0.5rem;
+}
+
+/* Back out of a chosen game without losing the name already typed. */
+.backLink {
+  align-self: start;
+  padding: 0.35rem 0;
+  border: 0;
+  background: none;
+  color: var(--ink-dim);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.backLink:hover {
+  color: var(--ink);
 }

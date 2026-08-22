@@ -1,4 +1,20 @@
-import type { Card, NaturalRank, Suit } from '@bukharo/game-engine';
+/**
+ * Card presentation, shared by every game.
+ *
+ * Deliberately structural rather than tied to an engine: drawing a card is not
+ * a rule. Bukharo's cards carry point values and jokers, Mindi's carry neither,
+ * and both satisfy the shape below.
+ */
+export type Suit = 'clubs' | 'diamonds' | 'hearts' | 'spades';
+
+export interface CardFace {
+  id: string;
+  rank: string;
+  suit: Suit | null;
+  isJoker?: boolean;
+  /** Bukharo scores by card; Mindi does not, so this is optional. */
+  basePointValue?: number;
+}
 
 export const SUIT_SYMBOL: Record<Suit, string> = {
   clubs: '♣',
@@ -27,7 +43,7 @@ export function isRedSuit(suit: Suit | null): boolean {
   return suit === 'hearts' || suit === 'diamonds';
 }
 
-export function cardText(card: Card): string {
+export function cardText(card: CardFace): string {
   if (card.isJoker) return 'JKR';
   return `${card.rank}${SUIT_SYMBOL[card.suit!]}`;
 }
@@ -42,21 +58,21 @@ export function cardText(card: Card): string {
  * of playing, and a screen reader user gets the same information as anyone
  * else, no more and no less.
  */
-export function cardLabel(card: Card, _wildRank: NaturalRank | null): string {
+export function cardLabel(card: CardFace, _wildRank?: string | null): string {
   return card.isJoker ? 'Joker' : `${card.rank} of ${SUIT_NAME[card.suit!]}`;
 }
 
-export function isWild(card: Card, wildRank: NaturalRank | null): boolean {
-  return card.isJoker || (wildRank !== null && card.rank === wildRank);
+export function isWild(card: CardFace, wildRank: string | null): boolean {
+  return Boolean(card.isJoker) || (wildRank !== null && card.rank === wildRank);
 }
 
 /**
  * Ordering for one sort mode. Jokers always sort last, where they are easy to
  * find no matter which mode is active.
  */
-export function compareCards(mode: SortMode): (a: Card, b: Card) => number {
+export function compareCards(mode: SortMode): (a: CardFace, b: CardFace) => number {
   return (a, b) => {
-    if (a.isJoker !== b.isJoker) return a.isJoker ? 1 : -1;
+    if (Boolean(a.isJoker) !== Boolean(b.isJoker)) return a.isJoker ? 1 : -1;
     switch (mode) {
       case 'rank':
         return (
@@ -64,8 +80,11 @@ export function compareCards(mode: SortMode): (a: Card, b: Card) => number {
           SUIT_ORDER[a.suit ?? 'spades'] - SUIT_ORDER[b.suit ?? 'spades']
         );
       case 'points':
+        // A game without card values falls back to rank, so the control still
+        // does something sensible rather than nothing.
         return (
-          b.basePointValue - a.basePointValue || (RANK_ORDER[b.rank] ?? 0) - (RANK_ORDER[a.rank] ?? 0)
+          (b.basePointValue ?? 0) - (a.basePointValue ?? 0) ||
+          (RANK_ORDER[b.rank] ?? 0) - (RANK_ORDER[a.rank] ?? 0)
         );
       case 'suit':
       default:
@@ -77,7 +96,7 @@ export function compareCards(mode: SortMode): (a: Card, b: Card) => number {
   };
 }
 
-export function sortHand(cards: Card[], mode: SortMode): Card[] {
+export function sortHand<T extends CardFace>(cards: T[], mode: SortMode): T[] {
   return [...cards].sort(compareCards(mode));
 }
 

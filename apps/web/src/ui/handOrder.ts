@@ -1,10 +1,8 @@
-import type { Card } from '@bukharo/game-engine';
-
-import { compareCards, sortHand, type SortMode } from './cards';
+import { compareCards, sortHand, type CardFace, type SortMode } from './cards';
 
 export interface HandOrderInput {
   /** The hand as the server sees it. */
-  cards: Card[];
+  cards: CardFace[];
   /** The order currently on screen, as card ids. */
   previousOrder: string[];
   /** True once the player has dragged a card, which pins their arrangement. */
@@ -59,7 +57,7 @@ export function planHandOrder({
  * replacement is a fresh deal, a new round, the Bucharoo or a reconnect —
  * highlighting all thirteen would be noise, so it highlights none.
  */
-export function pickedUpThisTurn(cards: Card[], previousIds: ReadonlySet<string>): string[] {
+export function pickedUpThisTurn(cards: CardFace[], previousIds: ReadonlySet<string>): string[] {
   const arrivals = cards.filter((c) => !previousIds.has(c.id));
   if (arrivals.length === 0 || arrivals.length === cards.length) return [];
   return arrivals.map((c) => c.id);

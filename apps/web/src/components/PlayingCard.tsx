@@ -1,12 +1,10 @@
-import type { Card, NaturalRank } from '@bukharo/game-engine';
-
-import { SUIT_SYMBOL, cardLabel, isRedSuit } from '../ui/cards';
+import { SUIT_SYMBOL, cardLabel, isRedSuit, type CardFace } from '../ui/cards';
 
 export type CardSize = 'xs' | 'sm' | 'md' | 'lg';
 
 interface Props {
-  card: Card;
-  wildRank: NaturalRank | null;
+  card: CardFace;
+  wildRank?: string | null;
   selected?: boolean;
   size?: CardSize;
   /** Shown on melded cards where a wild stands in for something else. */
@@ -37,7 +35,7 @@ const PIP_LAYOUT: Record<string, Array<[column: number, row: number]>> = {
 
 const COURT_RANKS = ['J', 'Q', 'K'];
 
-function CardCentre({ card }: { card: Card }) {
+function CardCentre({ card }: { card: CardFace }) {
   if (card.isJoker) {
     return (
       <span className="card__centre card__centre--joker" aria-hidden="true">
@@ -86,7 +84,7 @@ function CardCentre({ card }: { card: Card }) {
 
 export function PlayingCard({
   card,
-  wildRank,
+  wildRank = null,
   selected = false,
   size = 'md',
   representing,

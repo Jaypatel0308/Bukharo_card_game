@@ -599,3 +599,148 @@
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+
+/* ---- Mindi: seats, trick, tally ---- */
+
+.mseats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mseat {
+  flex: 1 1 5.5rem;
+  min-width: 0;
+  padding: 0.3rem 0.4rem;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--line);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--surface-deep) 55%, transparent);
+  font-size: 0.72rem;
+}
+
+.mseat--team_a { border-left-color: var(--team-a); }
+.mseat--team_b { border-left-color: var(--team-b); }
+
+.mseat.is-active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.mseat.is-you {
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
+}
+
+.mseat__top {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.mseat__name {
+  overflow: hidden;
+  font-weight: 700;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.mseat__meta {
+  display: block;
+  color: var(--ink-dim);
+}
+
+.trick {
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--surface-deep) 45%, transparent);
+}
+
+.trick__header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.trick__trump {
+  padding: 0.1rem 0.45rem;
+  border: 2px solid var(--line);
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--ink-dim);
+}
+
+.trick__trump.is-set {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.trick__note {
+  color: var(--ink-dim);
+  font-size: 0.72rem;
+}
+
+.trick__empty {
+  margin: 0.5rem 0 0;
+  color: var(--ink-dim);
+  font-size: 0.8rem;
+}
+
+.trick__plays {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.trick__play {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.2rem;
+  border: 1px solid transparent;
+  border-radius: 8px;
+}
+
+.trick__play.is-winner {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.trick__who {
+  max-width: 3.4rem;
+  overflow: hidden;
+  color: var(--ink-dim);
+  font-size: 0.62rem;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.trick__result {
+  margin: 0.45rem 0 0;
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.mtally {
+  margin: 0;
+  color: var(--ink-dim);
+  font-size: 0.74rem;
+  text-align: center;
+}
+
+/* A card that cannot legally be played is dimmed, not hidden: knowing what you
+   hold matters even when you cannot use it. */
+.hand__slot.is-unplayable .card {
+  opacity: 0.42;
+}

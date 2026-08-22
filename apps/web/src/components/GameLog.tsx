@@ -1,6 +1,16 @@
-import type { LogEntry } from '@bukharo/game-engine';
+/**
+ * Only what a log line needs to be shown. Both games write entries with more
+ * than this — a round number here, a hand number there — and neither shape
+ * belongs in a component whose job is to print a list.
+ */
+export interface LogLine {
+  seq: number;
+  timestamp: number;
+  type: string;
+  message: string;
+}
 
-export function GameLog({ log, onClose }: { log: LogEntry[]; onClose(): void }) {
+export function GameLog({ log, onClose }: { log: LogLine[]; onClose(): void }) {
   const entries = [...log].reverse();
   return (
     <div className="drawer" role="dialog" aria-modal="true" aria-label="Game log">

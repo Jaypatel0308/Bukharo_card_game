@@ -8,15 +8,24 @@ phones. The server enforces every rule, keeps each hand private, scores each
 round automatically and survives refreshes, disconnects and restarts.
 
 ```
-Open site → Create room → Share code → Friends join → Sit in teams → Start → Play → Auto-scoring → Next round
+Open site → Pick a game → Create room → Share code → Friends join → Start → Play → Auto-scoring → Next round
 ```
+
+Two games are playable:
+
+**Bukharo** — four players, two teams. Meld a clean run to open, take the whole
+discard pile when you like, and go out by discarding your last card.
+
+**Mindi (Mendicot)** — four, six or eight players in two teams. Trick taking
+where only the tens count: capture more than the other side, and sweeping every
+one of them lands them a Kot.
 
 ## Quick start
 
 ```bash
 npm install
 npm run build
-npm test          # 275 tests: two engines, server and web client
+npm test          # 290 tests: two engines, server and web client
 npm start         # http://localhost:8787
 ```
 
@@ -166,8 +175,8 @@ npm run lint          # ESLint: bugs, not style
 npm run test:engine   # 75 Bukharo rule tests, no I/O
 npm run test:mindi    # 55 Mindi rule tests, no I/O
 npm run test:server   # 56 tests against a real server process
-npm run test:web      # 89 client tests (Vitest, jsdom)
-npm run test:e2e      # 29 browser tests (Playwright: desktop and phone)
+npm run test:web      # 104 client tests (Vitest, jsdom)
+npm run test:e2e      # 39 browser tests (Playwright: desktop and phone)
 ```
 
 The lint rules are chosen to catch what review misses rather than to argue

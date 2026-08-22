@@ -66,7 +66,7 @@ export const GAMES: Record<GameId, GameDescriptor> = {
     targetHint: 'A team reaching this many Kot loses the match.',
     targetOptions: [1, 2, 3, 5],
     defaultTarget: 3,
-    hasTable: false,
+    hasTable: true,
   },
 };
 

@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
-import type { Card, NaturalRank } from '@bukharo/game-engine';
-
 import { PlayingCard } from './PlayingCard';
-import { sortHand, type SortMode } from '../ui/cards';
+import { sortHand, type CardFace, type SortMode } from '../ui/cards';
 import { pickedUpThisTurn, planHandOrder, reorderForDrag } from '../ui/handOrder';
 
 interface Props {
-  cards: Card[];
-  wildRank: NaturalRank | null;
+  cards: CardFace[];
+  wildRank?: string | null;
+  /** Cards that cannot legally be played right now, dimmed rather than hidden. */
+  unplayableIds?: string[];
   selectedIds: string[];
   onToggle(cardId: string): void;
   /** Drives the picked-up highlight, which belongs to the turn it happened in. */
@@ -24,7 +24,14 @@ interface Props {
  * there is to do between turns. Nothing here can be submitted — the action bar
  * decides that — so an early selection costs nothing.
  */
-export function Hand({ cards, wildRank, selectedIds, onToggle, isYourTurn = false }: Props) {
+export function Hand({
+  cards,
+  wildRank = null,
+  unplayableIds = [],
+  selectedIds,
+  onToggle,
+  isYourTurn = false,
+}: Props) {
   const [sortMode, setSortMode] = useState<SortMode>('suit');
   const [order, setOrder] = useState<string[]>([]);
   /** True once the player has dragged a card, which pins their arrangement. */
@@ -64,7 +71,7 @@ export function Hand({ cards, wildRank, selectedIds, onToggle, isYourTurn = fals
   }, [isYourTurn]);
 
   const byId = new Map(cards.map((c) => [c.id, c]));
-  const ordered = order.map((id) => byId.get(id)).filter((c): c is Card => Boolean(c));
+  const ordered = order.map((id) => byId.get(id)).filter((c): c is CardFace => Boolean(c));
   const newCount = justPickedUp.filter((id) => byId.has(id)).length;
 
   const applySort = (mode: SortMode): void => {
@@ -152,7 +159,9 @@ export function Hand({ cards, wildRank, selectedIds, onToggle, isYourTurn = fals
           <div
             key={card.id}
             data-card-id={card.id}
-            className={`hand__slot ${draggingId === card.id ? 'is-dragging' : ''}`}
+            className={`hand__slot ${draggingId === card.id ? 'is-dragging' : ''} ${
+              unplayableIds.includes(card.id) ? 'is-unplayable' : ''
+            }`}
             onPointerDown={(event) => onPointerDown(event, card.id)}
           >
             <PlayingCard

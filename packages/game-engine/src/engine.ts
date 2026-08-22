@@ -229,20 +229,28 @@ export function startRound(state: GameState, rules: RuleConfig, rng: Rng): GameS
   // Wild reveal from the middle of the stock.
   draft.wildCard = null;
   draft.wildRank = null;
-  if (rules.roundWildEnabled) {
-    for (let attempt = 0; attempt < 20; attempt++) {
-      const index = Math.floor(draft.stock.length / 2);
-      const revealed = draft.stock[index]!;
-      if (revealed.isJoker && rules.jokerWildRevealPolicy === 'REDRAW') {
-        draft.stock = shuffle(draft.stock, rng);
-        continue;
+  if (rules.roundWildEnabled && draft.stock.length > 0) {
+    let index = Math.floor(draft.stock.length / 2);
+
+    // §99.2 — a Joker turned up here goes back into the stock, and another
+    // card is drawn at random to set the wild rank instead. The Joker is left
+    // where it is rather than the stock being reshuffled: the rule replaces
+    // the one card, and reordering the rest would change what everyone draws.
+    if (draft.stock[index]!.isJoker && rules.jokerWildRevealPolicy === 'REDRAW') {
+      const naturals: number[] = [];
+      for (let i = 0; i < draft.stock.length; i++) {
+        if (!draft.stock[i]!.isJoker) naturals.push(i);
       }
-      draft.stock.splice(index, 1);
-      draft.wildCard = revealed;
-      draft.wildRank = revealed.isJoker ? 'A' : (revealed.rank as NaturalRank);
-      if (!rules.wildCardSetAside) draft.discardPile.push(revealed);
-      break;
+      // Nothing but Jokers left to draw is not a real deal, but it must not
+      // end the round with no wild rank at all, so the Joker stands as an Ace.
+      if (naturals.length > 0) index = naturals[rng.nextInt(naturals.length)]!;
     }
+
+    const revealed = draft.stock[index]!;
+    draft.stock.splice(index, 1);
+    draft.wildCard = revealed;
+    draft.wildRank = revealed.isJoker ? 'A' : (revealed.rank as NaturalRank);
+    if (!rules.wildCardSetAside) draft.discardPile.push(revealed);
   }
 
   draft.melds = [];

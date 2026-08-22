@@ -2,8 +2,10 @@ import { createHash, randomBytes } from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
-import type { GameState, RuleConfig, TeamId } from '@bukharo/game-engine';
 import type { GameId, RoomStatus } from '@bukharo/shared';
+
+/** Teams are the room's business; what they mean is the game's. */
+export type TeamId = 'TEAM_A' | 'TEAM_B';
 
 /**
  * Server-side room record. This is the persisted shape — it contains hands and
@@ -28,7 +30,7 @@ export interface RoomPlayer {
  * satisfy. A room written by an earlier version is dropped on load rather than
  * resurrected half-formed.
  */
-export const ROOM_SCHEMA_VERSION = 2;
+export const ROOM_SCHEMA_VERSION = 3;
 
 export interface Room {
   id: string;
@@ -36,11 +38,14 @@ export interface Room {
   code: string;
   gameId: GameId;
   status: RoomStatus;
-  targetScore: number;
-  rules: RuleConfig;
+  /** What the match is played to. The game says what the number means. */
+  target: number;
+  /** The game's own settings, opaque to the room. */
+  settings: unknown;
   teamNames: Record<TeamId, string>;
   players: RoomPlayer[];
-  game: GameState | null;
+  /** The game's state, which the room stores and never inspects. */
+  game: unknown;
   createdAt: number;
   updatedAt: number;
   /** §59 — actionId → timestamp, for deduplicating retried messages. */

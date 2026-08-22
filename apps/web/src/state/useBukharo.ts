@@ -39,14 +39,14 @@ export interface Bukharo {
   pendingWild: PendingWildChoice | null;
   cancelWildChoice(): void;
 
-  createRoom(displayName: string, targetScore: number, gameId: GameId): void;
+  createRoom(displayName: string, target: number, gameId: GameId): void;
   joinRoom(displayName: string, roomCode: string): void;
   leaveRoom(): void;
   setReady(ready: boolean): void;
   choosePosition(position: number): void;
   assignPosition(playerId: string, position: number): void;
   kickPlayer(playerId: string): void;
-  setTargetScore(targetScore: number): void;
+  setTarget(target: number): void;
   setTeamName(teamId: TeamId, name: string): void;
   endMatch(): void;
   skipAbsentPlayer(): void;
@@ -138,14 +138,16 @@ export function useBukharo(): Bukharo {
     return () => connection.close();
   }, [handleError]);
 
-  // A gentle nudge when the turn comes round (§71).
+  // A gentle nudge when the turn comes round (§71). Both games report a
+  // current player, so this needs no idea which is being played.
+  const currentPlayerId = room?.game?.view.currentPlayerId ?? null;
   useEffect(() => {
-    const currentId = room?.game?.currentPlayerId ?? null;
+    const currentId = currentPlayerId;
     if (currentId && currentId !== previousTurn.current && currentId === room?.youId) {
       playSound('yourTurn');
     }
     previousTurn.current = currentId;
-  }, [room?.game?.currentPlayerId, room?.youId]);
+  }, [currentPlayerId, room?.youId]);
 
   const send = useCallback((message: Parameters<Connection['send']>[0]) => {
     connectionRef.current?.send(message);
@@ -172,8 +174,8 @@ export function useBukharo(): Bukharo {
       pendingWild,
       cancelWildChoice: () => setPendingWild(null),
 
-      createRoom: (displayName, targetScore, gameId) =>
-        send({ type: 'room:create', actionId: newActionId(), displayName, targetScore, gameId }),
+      createRoom: (displayName, target, gameId) =>
+        send({ type: 'room:create', actionId: newActionId(), displayName, target, gameId }),
       joinRoom: (displayName, roomCode) =>
         send({ type: 'room:join', actionId: newActionId(), displayName, roomCode: roomCode.toUpperCase() }),
       leaveRoom: () => {
@@ -184,7 +186,7 @@ export function useBukharo(): Bukharo {
       choosePosition: (position) => send({ type: 'seat:choose', position }),
       assignPosition: (playerId, position) => send({ type: 'host:assignSeat', playerId, position }),
       kickPlayer: (playerId) => send({ type: 'host:kick', playerId }),
-      setTargetScore: (targetScore) => send({ type: 'host:settings', targetScore }),
+      setTarget: (target) => send({ type: 'host:settings', target }),
       setTeamName: (teamId, name) => send({ type: 'host:teamName', teamId, name }),
       endMatch: () => send({ type: 'host:endMatch' }),
       skipAbsentPlayer: () => send({ type: 'host:skipTurn' }),

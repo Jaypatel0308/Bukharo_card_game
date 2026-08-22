@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { TARGET_SCORE_OPTIONS, describeGame, teamForPosition } from '@bukharo/shared';
+import { describeGame, teamForPosition } from '@bukharo/shared';
 
 import { TeamNameField } from '../components/TeamNameField';
 import { ThemePicker } from '../components/ThemePicker';
@@ -130,20 +130,21 @@ export function Lobby({ app }: { app: Bukharo }) {
 
       {isHost && (
         <div className="panel">
-          <h2 className="panel__title">Match target</h2>
+          <h2 className="panel__title">{game.targetLabel}</h2>
           <div className="segmented">
-            {TARGET_SCORE_OPTIONS.map((value) => (
+            {game.targetOptions.map((value) => (
               <button
                 key={value}
                 type="button"
-                className={`segmented__item ${room.targetScore === value ? 'is-active' : ''}`}
-                aria-pressed={room.targetScore === value}
-                onClick={() => app.setTargetScore(value)}
+                className={`segmented__item ${room.target === value ? 'is-active' : ''}`}
+                aria-pressed={room.target === value}
+                onClick={() => app.setTarget(value)}
               >
                 {value.toLocaleString()}
               </button>
             ))}
           </div>
+          <p className="hint">{game.targetHint}</p>
         </div>
       )}
 

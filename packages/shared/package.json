@@ -16,7 +16,8 @@
     "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },
   "dependencies": {
-    "@bukharo/game-engine": "*"
+    "@bukharo/game-engine": "*",
+    "@bukharo/game-mindi": "*"
   },
   "devDependencies": {
     "typescript": "^5.6.3"

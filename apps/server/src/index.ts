@@ -8,7 +8,7 @@ import { DEFAULT_GAME, type ClientMessage, type ServerError, type ServerMessage 
 
 import { config } from './config.js';
 import { RoomManager, roomView, type OpResult } from './rooms.js';
-import { asGameId, asPosition, asTeamId, asWildAssignments } from './validate.js';
+import { asGameId, asPosition, asTeamId } from './validate.js';
 
 interface Connection {
   ws: WebSocket;
@@ -202,7 +202,7 @@ async function handleMessage(connection: Connection, message: ClientMessage): Pr
 
     case 'room:create': {
       const gameId = asGameId(message.gameId) ?? DEFAULT_GAME;
-      const result = await manager.createRoom(message.displayName, message.targetScore, gameId);
+      const result = await manager.createRoom(message.displayName, message.target, gameId);
       const value = handleResult(ws, result, message.actionId);
       if (!value) return;
       await attach(connection, value.room.id, value.playerId, value.sessionToken);
@@ -312,7 +312,7 @@ async function handleMessage(connection: Connection, message: ClientMessage): Pr
       return;
     }
     case 'host:settings': {
-      const result = await manager.updateSettings(roomId, playerId, message.targetScore);
+      const result = await manager.updateSettings(roomId, playerId, message.target);
       if (handleResult(ws, result)) broadcastRoom(roomId);
       return;
     }
@@ -326,11 +326,8 @@ async function handleMessage(connection: Connection, message: ClientMessage): Pr
         sendError(ws, { code: 'INVALID_MESSAGE', message: 'That action was not understood.' });
         return;
       }
-      const action = {
-        ...message.action,
-        wildAssignments: asWildAssignments(message.action.wildAssignments),
-      };
-      const result = await manager.gameAction(roomId, playerId, message.actionId, action);
+      // Each game validates its own action shape inside its module.
+      const result = await manager.gameAction(roomId, playerId, message.actionId, message.action);
       const value = handleResult(ws, result, message.actionId);
       if (!value) return;
       broadcastRoom(roomId);

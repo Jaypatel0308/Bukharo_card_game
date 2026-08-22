@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { GAME_IDS, GAMES, TARGET_SCORE_OPTIONS, type GameId } from '@bukharo/shared';
+import { GAME_IDS, GAMES, type GameId } from '@bukharo/shared';
 
 import { ThemePicker } from '../components/ThemePicker';
 import type { Bukharo } from '../state/useBukharo';
@@ -18,8 +18,9 @@ export function Home({ app }: { app: Bukharo }) {
     }
   });
   const [code, setCode] = useState(initialCode);
-  const [targetScore, setTargetScore] = useState(2000);
   const [gameId, setGameId] = useState<GameId>(GAME_IDS[0]!);
+  const game = GAMES[gameId];
+  const [target, setTarget] = useState(game.defaultTarget);
 
   const remember = (value: string): void => {
     try {
@@ -34,7 +35,7 @@ export function Home({ app }: { app: Bukharo }) {
     const trimmed = name.trim();
     if (!trimmed) return;
     remember(trimmed);
-    if (mode === 'create') app.createRoom(trimmed, targetScore, gameId);
+    if (mode === 'create') app.createRoom(trimmed, target, gameId);
     else app.joinRoom(trimmed, code.trim());
   };
 
@@ -108,7 +109,10 @@ export function Home({ app }: { app: Bukharo }) {
                         type="button"
                         className={`gameChoice ${gameId === id ? 'is-active' : ''}`}
                         aria-pressed={gameId === id}
-                        onClick={() => setGameId(id)}
+                        onClick={() => {
+                          setGameId(id);
+                          setTarget(GAMES[id].defaultTarget);
+                        }}
                       >
                         <span className="gameChoice__name">{GAMES[id].name}</span>
                         <span className="gameChoice__tagline">{GAMES[id].tagline}</span>
@@ -119,20 +123,21 @@ export function Home({ app }: { app: Bukharo }) {
               )}
 
               <fieldset className="field">
-                <legend className="field__label">Play to</legend>
+                <legend className="field__label">{game.targetLabel}</legend>
                 <div className="segmented">
-                  {TARGET_SCORE_OPTIONS.map((value) => (
+                  {game.targetOptions.map((value) => (
                     <button
                       key={value}
                       type="button"
-                      className={`segmented__item ${targetScore === value ? 'is-active' : ''}`}
-                      aria-pressed={targetScore === value}
-                      onClick={() => setTargetScore(value)}
+                      className={`segmented__item ${target === value ? 'is-active' : ''}`}
+                      aria-pressed={target === value}
+                      onClick={() => setTarget(value)}
                     >
                       {value.toLocaleString()}
                     </button>
                   ))}
                 </div>
+                <p className="hint">{game.targetHint}</p>
               </fieldset>
             </>
           )}

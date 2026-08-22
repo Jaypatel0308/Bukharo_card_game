@@ -98,6 +98,33 @@ export default tseslint.config(
     },
   },
 
+  /*
+   * The room layer must not know which game it is hosting.
+   *
+   * Only the modules under src/games may import an engine; everything else in
+   * the server goes through the registry. Without this the room code would
+   * drift back into knowing about melds or trumps, which is exactly what the
+   * registry exists to prevent.
+   */
+  {
+    files: ['apps/server/src/**/*.ts'],
+    ignores: ['apps/server/src/games/**'],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@bukharo/game-engine', '@bukharo/game-mindi'],
+              message:
+                'The room layer talks to games through the registry in ./games, never to an engine directly.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+
   // ---- Node: engine, shared protocol, server ----
   {
     files: ['packages/**/*.ts', 'apps/server/**/*.ts'],

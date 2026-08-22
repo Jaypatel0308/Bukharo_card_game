@@ -191,7 +191,7 @@ describe('rooms over websockets', () => {
     host.send({ type: 'host:teamName', teamId: 'TEAM_A', name: 'Rockets' });
     await host.waitForState((r) => r.teamNames.TEAM_A === 'Rockets');
     await startMatch(all, host);
-    assert.equal(host.room.game.teams.TEAM_A.name, 'Rockets');
+    assert.equal(host.room.game.view.teams.TEAM_A.name, 'Rockets');
     for (const client of all) client.close();
   });
 
@@ -256,7 +256,7 @@ describe('rooms over websockets', () => {
 
     const hands = new Map();
     for (const client of all) {
-      const me = client.room.game.you;
+      const me = client.room.game.view.you;
       assert.equal(me.hand.length, 13);
       hands.set(client.room.youId, me.hand.map((c) => c.id));
     }
@@ -273,7 +273,7 @@ describe('rooms over websockets', () => {
         }
       }
       // Opponents are described by count only.
-      for (const opponent of client.room.game.players) {
+      for (const opponent of client.room.game.view.players) {
         assert.equal('hand' in opponent, false);
         assert.equal(opponent.handCount, 13);
       }
@@ -285,12 +285,12 @@ describe('rooms over websockets', () => {
     const { host, all } = await seatFour();
     await startMatch(all, host);
 
-    const currentId = host.room.game.currentPlayerId;
+    const currentId = host.room.game.view.currentPlayerId;
     const active = all.find((c) => c.room.youId === currentId);
-    const stockBefore = active.room.game.stockCount;
+    const stockBefore = active.room.game.view.stockCount;
 
     active.send({ type: 'game:action', actionId: 'dup-1', action: { type: 'DRAW_STOCK' } });
-    await active.waitForState((room) => room.game?.you?.hand.length === 14);
+    await active.waitForState((room) => room.game?.view.you?.hand.length === 14);
     active.send({ type: 'game:action', actionId: 'dup-1', action: { type: 'DRAW_STOCK' } });
     // Messages on one connection are processed in order, so a pong proves the
     // server has finished with the duplicate. Waiting a fixed number of
@@ -298,15 +298,15 @@ describe('rooms over websockets', () => {
     active.send({ type: 'ping' });
     await active.waitFor((m) => m.type === 'pong');
 
-    assert.equal(active.room.game.you.hand.length, 14);
-    assert.equal(active.room.game.stockCount, stockBefore - 1);
+    assert.equal(active.room.game.view.you.hand.length, 14);
+    assert.equal(active.room.game.view.stockCount, stockBefore - 1);
     for (const client of all) client.close();
   });
 
   it('rejects a move from the player who is not on turn', async () => {
     const { host, all } = await seatFour();
     await startMatch(all, host);
-    const currentId = host.room.game.currentPlayerId;
+    const currentId = host.room.game.view.currentPlayerId;
     const idle = all.find((c) => c.room.youId !== currentId);
     idle.send({ type: 'game:action', actionId: 'bad-1', action: { type: 'DRAW_STOCK' } });
     const error = await idle.waitFor((m) => m.type === 'error');
@@ -320,7 +320,7 @@ describe('rooms over websockets', () => {
 
     const victim = all[1];
     const token = victim.session.sessionToken;
-    const handBefore = victim.room.game.you.hand.map((c) => c.id);
+    const handBefore = victim.room.game.view.you.hand.map((c) => c.id);
     const playerId = victim.room.youId;
     victim.close();
 
@@ -331,7 +331,7 @@ describe('rooms over websockets', () => {
     const room = await returning.waitForState((r) => r.game != null);
 
     assert.equal(room.youId, playerId);
-    assert.deepEqual(room.game.you.hand.map((c) => c.id), handBefore);
+    assert.deepEqual(room.game.view.you.hand.map((c) => c.id), handBefore);
     await host.waitForState((r) => r.players.some((p) => p.id === playerId && p.connected));
 
     returning.close();
@@ -367,10 +367,10 @@ describe('rooms over websockets', () => {
     const { host, all } = await seatFour();
     await startMatch(all, host);
 
-    const currentId = host.room.game.currentPlayerId;
+    const currentId = host.room.game.view.currentPlayerId;
     const active = all.find((c) => c.room.youId === currentId);
     active.send({ type: 'game:action', actionId: 'turn-draw', action: { type: 'DRAW_STOCK' } });
-    await active.waitForState((room) => room.game?.turnPhase === 'PLAYING_CARDS');
+    await active.waitForState((room) => room.game?.view.turnPhase === 'PLAYING_CARDS');
 
     // The drawn card arrives privately, and only for the drawer.
     await active.waitFor((m) => m.type === 'game:event' && m.event.type === 'CARD_DRAWN');
@@ -383,11 +383,11 @@ describe('rooms over websockets', () => {
     const publicDraw = spectator.events.find((e) => e.type === 'PLAYER_DREW_CARD');
     assert.equal('card' in publicDraw.payload, false, 'the table must not learn the card');
 
-    const discardId = active.room.game.you.hand[0].id;
+    const discardId = active.room.game.view.you.hand[0].id;
     active.send({ type: 'game:action', actionId: 'turn-discard', action: { type: 'DISCARD', cardId: discardId } });
-    const after = await active.waitForState((room) => room.game?.currentPlayerId != null && room.game.currentPlayerId !== currentId);
-    assert.equal(after.game.turnPhase, 'AWAITING_DRAW');
-    assert.equal(after.game.discardPile.at(-1).id, discardId);
+    const after = await active.waitForState((room) => room.game?.view.currentPlayerId != null && room.game.view.currentPlayerId !== currentId);
+    assert.equal(after.game.view.turnPhase, 'AWAITING_DRAW');
+    assert.equal(after.game.view.discardPile.at(-1).id, discardId);
     for (const client of all) client.close();
   });
 
@@ -395,12 +395,12 @@ describe('rooms over websockets', () => {
     const { host, all } = await seatFour();
     await startMatch(all, host);
 
-    const currentId = host.room.game.currentPlayerId;
+    const currentId = host.room.game.view.currentPlayerId;
     const active = all.find((c) => c.room.youId === currentId);
     active.send({ type: 'game:action', actionId: 'meld-draw', action: { type: 'DRAW_STOCK' } });
-    await active.waitForState((room) => room.game?.turnPhase === 'PLAYING_CARDS');
+    await active.waitForState((room) => room.game?.view.turnPhase === 'PLAYING_CARDS');
 
-    const cardIds = active.room.game.you.hand.slice(0, 3).map((c) => c.id);
+    const cardIds = active.room.game.view.you.hand.slice(0, 3).map((c) => c.id);
     active.send({ type: 'game:action', actionId: 'meld-bad', action: { type: 'CREATE_MELD', cardIds } });
     const error = await active.waitFor((m) => m.type === 'error' && m.error.actionId === 'meld-bad');
     assert.ok(error.error.message.length > 20, 'error should explain itself');

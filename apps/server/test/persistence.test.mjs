@@ -147,21 +147,21 @@ describe('surviving a restart (§61)', () => {
     }
 
     // Play part of a turn so the saved state is mid-game, not just dealt.
-    const currentId = host.room.game.currentPlayerId;
+    const currentId = host.room.game.view.currentPlayerId;
     const active = clients.find((c) => c.room.youId === currentId);
     active.send({ type: 'game:action', actionId: 'd1', action: { type: 'DRAW_STOCK' } });
-    await active.waitForState((r) => r.game?.turnPhase === 'PLAYING_CARDS');
+    await active.waitForState((r) => r.game?.view.turnPhase === 'PLAYING_CARDS');
 
     const before = {
       roomCode: host.room.roomCode,
-      hostHand: host.room.game.you.hand.map((c) => c.id),
-      currentPlayerId: host.room.game.currentPlayerId,
-      turnPhase: host.room.game.turnPhase,
-      stockCount: host.room.game.stockCount,
-      wildRank: host.room.game.wildRank,
-      discard: host.room.game.discardPile.map((c) => c.id),
+      hostHand: host.room.game.view.you.hand.map((c) => c.id),
+      currentPlayerId: host.room.game.view.currentPlayerId,
+      turnPhase: host.room.game.view.turnPhase,
+      stockCount: host.room.game.view.stockCount,
+      wildRank: host.room.game.view.wildRank,
+      discard: host.room.game.view.discardPile.map((c) => c.id),
       teamNames: host.room.teamNames,
-      roundNumber: host.room.game.roundNumber,
+      roundNumber: host.room.game.view.roundNumber,
     };
 
     for (const client of clients) client.close();
@@ -179,13 +179,13 @@ describe('surviving a restart (§61)', () => {
 
     assert.equal(room.roomCode, before.roomCode);
     assert.equal(room.status, 'PLAYING');
-    assert.deepEqual(room.game.you.hand.map((c) => c.id), before.hostHand);
-    assert.equal(room.game.currentPlayerId, before.currentPlayerId);
-    assert.equal(room.game.turnPhase, before.turnPhase);
-    assert.equal(room.game.stockCount, before.stockCount);
-    assert.equal(room.game.wildRank, before.wildRank);
-    assert.deepEqual(room.game.discardPile.map((c) => c.id), before.discard);
-    assert.equal(room.game.roundNumber, before.roundNumber);
+    assert.deepEqual(room.game.view.you.hand.map((c) => c.id), before.hostHand);
+    assert.equal(room.game.view.currentPlayerId, before.currentPlayerId);
+    assert.equal(room.game.view.turnPhase, before.turnPhase);
+    assert.equal(room.game.view.stockCount, before.stockCount);
+    assert.equal(room.game.view.wildRank, before.wildRank);
+    assert.deepEqual(room.game.view.discardPile.map((c) => c.id), before.discard);
+    assert.equal(room.game.view.roundNumber, before.roundNumber);
     assert.deepEqual(room.teamNames, before.teamNames);
 
     // Everyone is shown as away until they come back.
@@ -193,16 +193,16 @@ describe('surviving a restart (§61)', () => {
     assert.equal(room.players.length, 4);
 
     // And play carries on from exactly where it stopped.
-    const resumedCurrent = room.game.currentPlayerId;
+    const resumedCurrent = room.game.view.currentPlayerId;
     if (resumedCurrent === room.youId) {
-      const hand = room.game.you.hand;
+      const hand = room.game.view.you.hand;
       returning.send({
         type: 'game:action',
         actionId: 'after-restart',
         action: { type: 'DISCARD', cardId: hand[0].id },
       });
-      const after = await returning.waitForState((r) => r.game?.currentPlayerId !== resumedCurrent);
-      assert.equal(after.game.discardPile.length, before.discard.length + 1);
+      const after = await returning.waitForState((r) => r.game?.view.currentPlayerId !== resumedCurrent);
+      assert.equal(after.game.view.discardPile.length, before.discard.length + 1);
     }
 
     returning.close();

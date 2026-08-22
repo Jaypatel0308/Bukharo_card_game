@@ -1,7 +1,7 @@
 import { MindiTable } from './games/mindi/MindiTable';
 import { Home } from './screens/Home';
 import { Lobby } from './screens/Lobby';
-import { Table } from './screens/Table';
+import { BukharoTable } from './games/bukharo/BukharoTable';
 import { useBukharo } from './state/useBukharo';
 
 export function App() {
@@ -13,7 +13,7 @@ export function App() {
     if (!room.game || room.status === 'LOBBY') return <Lobby app={app} />;
 
     // One table per game, chosen by the tag the server put on the snapshot.
-    if (room.game.gameId === 'bukharo') return <Table app={app} game={room.game.view} />;
+    if (room.game.gameId === 'bukharo') return <BukharoTable app={app} game={room.game.view} />;
     return <MindiTable app={app} view={room.game.view} />;
   };
 

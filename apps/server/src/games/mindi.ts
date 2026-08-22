@@ -16,7 +16,7 @@ import {
 } from '@bukharo/game-mindi';
 import { clampTarget, describeGame, type GameSnapshot } from '@bukharo/shared';
 
-import type { GameModule, GameOutcome, GamePhase } from './module.js';
+import { stampRecentLog, type GameModule, type GameOutcome, type GamePhase } from './module.js';
 
 const rng = cryptoRng((array) => {
   randomFillSync(array);
@@ -90,10 +90,11 @@ export const mindiModule: GameModule = {
     return asState(state).currentPlayerId;
   },
 
-  skipCurrentPlayer(state, reason) {
+  skipCurrentPlayer(state, reason, settings) {
     // A trick cannot resolve without a card from everyone, so getting past an
-    // absent player means playing one for them. See forceSkipTurn.
-    return forceSkipTurn(asState(state), reason, DEFAULT_MINDI_RULES);
+    // absent player means playing one for them. The room's own settings are
+    // used, because a forced play can finish a hand.
+    return forceSkipTurn(asState(state), reason, asRules(settings));
   },
 
   renameTeam(state, teamId, name) {
@@ -101,11 +102,6 @@ export const mindiModule: GameModule = {
   },
 
   stampLog(state, now) {
-    const game = asState(state);
-    for (let i = game.log.length - 1; i >= 0; i--) {
-      const entry = game.log[i]!;
-      if (entry.timestamp > 1e12) break;
-      entry.timestamp = now;
-    }
+    stampRecentLog(asState(state).log, now);
   },
 };

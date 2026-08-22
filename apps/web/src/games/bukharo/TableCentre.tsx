@@ -1,6 +1,6 @@
 import type { GameView } from '@bukharo/game-engine';
 
-import { CardBack, CardSlot, PlayingCard } from './PlayingCard';
+import { CardBack, CardSlot, PlayingCard } from '../../components/PlayingCard';
 
 interface Props {
   game: GameView;

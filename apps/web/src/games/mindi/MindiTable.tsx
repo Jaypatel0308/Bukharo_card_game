@@ -3,7 +3,7 @@ import type { MindiView } from '@bukharo/shared';
 
 import { GameLog } from '../../components/GameLog';
 import { Hand } from '../../components/Hand';
-import { initialsOf } from '../../components/TopBar';
+import { initialsOf } from '../../ui/teams';
 import { MindiSeats } from './MindiSeats';
 import { TrickArea } from './TrickArea';
 import { canRevealTrump, isYourTurn, unplayableCardIds, youAreChoosing } from './rules';

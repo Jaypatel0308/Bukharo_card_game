@@ -1,7 +1,7 @@
 import type { GameView, TeamId } from '@bukharo/game-engine';
 
-import { initialsOf } from './TopBar';
-import { SEAT_LABEL } from '../ui/cards';
+import { initialsOf } from '../../ui/teams';
+import { SEAT_LABEL } from '../../ui/cards';
 
 interface Props {
   player: GameView['players'][number] | null;

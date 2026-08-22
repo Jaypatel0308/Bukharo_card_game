@@ -25,7 +25,7 @@ one of them lands them a Kot.
 ```bash
 npm install
 npm run build
-npm test          # 297 tests: two engines, server and web client
+npm test          # 303 tests: two engines, server and web client
 npm start         # http://localhost:8787
 ```
 
@@ -48,6 +48,11 @@ packages/shared        Wire protocol, and the catalogue of games on offer.
 apps/server            WebSocket server, rooms, sessions, persistence.
 apps/web               React client, mobile-first.
 ```
+
+The client is split the same way: `apps/web/src/games/bukharo/` and
+`.../mindi/` hold each table and its own components, with a lint rule against
+reaching sideways. Genuinely common things — a card face, a hand, the log — sit
+in `components/` and `ui/` and are shared on purpose rather than by accident.
 
 Neither engine lists the other as a dependency, so neither can import it, and
 a lint rule says so at the point of writing rather than leaving a confusing
@@ -174,7 +179,7 @@ behaviour.
 npm run lint          # ESLint: bugs, not style
 npm run test:engine   # 75 Bukharo rule tests, no I/O
 npm run test:mindi    # 61 Mindi rule tests, no I/O
-npm run test:server   # 57 tests against a real server process
+npm run test:server   # 63 tests against a real server process
 npm run test:web      # 104 client tests (Vitest, jsdom)
 npm run test:e2e      # 39 browser tests (Playwright: desktop and phone)
 ```

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { initialsOf } from './TopBar';
+import { initialsOf } from '../../ui/teams';
 
 describe('initialsOf', () => {
   it('takes the first letters of a two word name', () => {

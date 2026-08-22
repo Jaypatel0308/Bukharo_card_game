@@ -4,8 +4,8 @@ import { DEFAULT_RULES, createMatch, seededRng, viewFor } from '@bukharo/game-en
 import type { GameState } from '@bukharo/game-engine';
 import type { RoomView } from '@bukharo/shared';
 
-import { Table } from './Table';
-import type { Bukharo } from '../state/useBukharo';
+import { BukharoTable } from './BukharoTable';
+import type { Bukharo } from '../../state/useBukharo';
 
 afterEach(cleanup);
 
@@ -95,7 +95,7 @@ function layoutOrder(container: HTMLElement): string[] {
 describe('table layout', () => {
   it('puts the opponents’ melds above the centre and yours below it', () => {
     const state = gameState();
-    const { container } = render(<Table app={appFor(state, 'p1')} game={viewFor(state, 'p1')} />);
+    const { container } = render(<BukharoTable app={appFor(state, 'p1')} game={viewFor(state, 'p1')} />);
 
     expect(layoutOrder(container)).toEqual([
       'melds--theirs',
@@ -114,7 +114,7 @@ describe('table layout', () => {
       ['p1', 'Rockets'],
       ['p2', 'Comets'],
     ] as const) {
-      const { container, unmount } = render(<Table app={appFor(state, viewerId)} game={viewFor(state, viewerId)} />);
+      const { container, unmount } = render(<BukharoTable app={appFor(state, viewerId)} game={viewFor(state, viewerId)} />);
       const yours = container.querySelector('.melds--yours');
       expect(yours?.getAttribute('aria-label')).toBe(`${nearTeam} melds`);
       unmount();
@@ -123,7 +123,7 @@ describe('table layout', () => {
 
   it('shows the centre piles in the order wild, stock, discard', () => {
     const state = gameState();
-    const { container } = render(<Table app={appFor(state, 'p1')} game={viewFor(state, 'p1')} />);
+    const { container } = render(<BukharoTable app={appFor(state, 'p1')} game={viewFor(state, 'p1')} />);
     const labels = [...container.querySelectorAll('.pileArea .pile__label')].map((el) =>
       (el.textContent ?? '').trim(),
     );
@@ -134,7 +134,7 @@ describe('table layout', () => {
 
   it('never renders another player’s cards', () => {
     const state = gameState();
-    const { container } = render(<Table app={appFor(state, 'p1')} game={viewFor(state, 'p1')} />);
+    const { container } = render(<BukharoTable app={appFor(state, 'p1')} game={viewFor(state, 'p1')} />);
     const markup = container.innerHTML;
 
     const opponentCards = state.players.filter((p) => p.id !== 'p1').flatMap((p) => p.hand);

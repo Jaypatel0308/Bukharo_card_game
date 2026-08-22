@@ -1,0 +1,172 @@
+/* Bukharo's table: the meld tableau. */
+
+/*
+ * Laid out like a solitaire tableau. Each meld is a fan of overlapping cards
+ * so only the corner indices show, and the fans sit side by side and wrap onto
+ * the next line. Your team's melds sit below the centre, on your side of the
+ * table; the opponents' sit above it, across from you.
+ */
+
+.meldArea {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.melds {
+  padding: 0.45rem 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--surface-deep) 55%, transparent);
+}
+
+.melds--team_a { border-left: 3px solid var(--team-a); }
+.melds--team_b { border-left: 3px solid var(--team-b); }
+
+.melds__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.melds__header h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+  margin: 0;
+  font-size: 0.8rem;
+  letter-spacing: 0.03em;
+}
+
+.melds__title {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.melds__whose {
+  color: var(--ink-dim);
+  font-size: 0.66rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.melds__empty {
+  margin: 0.3rem 0 0;
+  color: var(--ink-dim);
+  font-size: 0.76rem;
+}
+
+/* Side by side, wrapping to the next line when the row fills. */
+.melds__list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.5rem 0.6rem;
+  margin-top: 0.45rem;
+}
+
+.meld {
+  display: block;
+  padding: 0.3rem 0.35rem 0.25rem;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--ink) 5%, transparent);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+.meld--selectable {
+  cursor: pointer;
+}
+
+.meld--selectable {
+  transition: transform 0.14s ease, box-shadow 0.14s ease, background 0.14s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .meld--selectable:hover {
+    background: color-mix(in srgb, var(--ink) 10%, transparent);
+  }
+}
+
+/* Lifted, not merely outlined: on a phone a thin ring around a compressed fan
+   is easy to miss, and this is the meld your cards are about to go into. */
+.meld.is-selected {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  box-shadow: 0 0 0 2px var(--accent), 0 6px 14px rgba(0, 0, 0, 0.4);
+  transform: translateY(-4px);
+}
+
+/*
+ * The fan. Each card after the first slides back over its neighbour, leaving
+ * a sliver wide enough for the corner index. Later cards paint on top through
+ * document order, so the fan reads left to right.
+ */
+.meld__fan {
+  display: flex;
+  align-items: flex-start;
+  padding-bottom: 2px;
+}
+
+.meld__fan .card + .card {
+  margin-left: calc(var(--card-w) * -1 * var(--fan-overlap, 0.58));
+}
+
+/* The sliver has to carry the index, and "10" is the widest one, so inside a
+   fan the index is set a little smaller and tighter to the edge. */
+.meld__fan .card__rank {
+  font-size: calc(var(--card-w) * 0.3);
+  letter-spacing: -0.06em;
+}
+
+.meld__fan .card__index--tl {
+  left: calc(var(--card-pad) * 0.8);
+}
+
+/* A wild's stand-in value would be hidden under the next card, so inside a fan
+   it moves to the bottom of the visible sliver. */
+.meld__fan .card__representing {
+  left: 0;
+  right: auto;
+  bottom: 0;
+  padding: 0 calc(var(--card-w) * 0.05);
+  border-radius: 0 calc(var(--card-w) * 0.06) 0 calc(var(--card-w) * 0.06);
+  font-size: calc(var(--card-w) * 0.19);
+  transform: none;
+}
+
+.meld__meta {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+  margin-top: 0.25rem;
+  color: var(--ink-dim);
+  font-size: 0.65rem;
+}
+
+.ribbon {
+  padding: 0.08rem 0.35rem;
+  border-radius: 3px;
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.ribbon--clean {
+  background: var(--good);
+  color: #06231b;
+}
+
+.ribbon--dirty {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+

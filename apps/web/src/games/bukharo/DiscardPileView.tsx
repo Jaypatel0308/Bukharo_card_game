@@ -1,6 +1,6 @@
 import type { Card, NaturalRank } from '@bukharo/game-engine';
 
-import { PlayingCard } from './PlayingCard';
+import { PlayingCard } from '../../components/PlayingCard';
 
 interface Props {
   cards: Card[];

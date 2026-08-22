@@ -14,7 +14,8 @@
   "scripts": {
     "build": "tsc -b",
     "test": "tsc -b --force && node --test \"dist/test/*.test.js\"",
-    "clean": "rm -rf dist tsconfig.tsbuildinfo"
+    "clean": "rm -rf dist tsconfig.tsbuildinfo",
+    "coverage": "tsc -b --force && node --test --experimental-test-coverage --test-coverage-exclude=\"**/test/**\" \"dist/test/*.test.js\""
   },
   "devDependencies": {
     "@types/node": "^22.9.0",

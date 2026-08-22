@@ -45,7 +45,16 @@ async function serveStatic(req: http.IncomingMessage, res: http.ServerResponse):
 
   if (url.pathname === '/health') {
     res.writeHead(200, { 'content-type': 'application/json' });
-    res.end(JSON.stringify({ ok: true, uptime: process.uptime() }));
+    // The commit is reported so a deploy check can tell *this* build being
+    // live apart from the previous one still serving while Render swaps over.
+    // Render sets RENDER_GIT_COMMIT itself; elsewhere it is simply unknown.
+    res.end(
+      JSON.stringify({
+        ok: true,
+        uptime: process.uptime(),
+        commit: process.env.RENDER_GIT_COMMIT ?? process.env.GIT_COMMIT ?? 'unknown',
+      }),
+    );
     return;
   }
 
@@ -201,7 +210,20 @@ async function handleMessage(connection: Connection, message: ClientMessage): Pr
       return;
 
     case 'room:create': {
-      const gameId = asGameId(message.gameId) ?? DEFAULT_GAME;
+      // Absent means an older client that predates the picker, and Bukharo is
+      // the right guess. Present but unrecognised is different: silently
+      // handing back a Bukharo room would leave the host believing they had
+      // opened something else, so it is refused like any other bad input.
+      const requested = message.gameId;
+      const gameId = requested == null ? DEFAULT_GAME : asGameId(requested);
+      if (!gameId) {
+        sendError(ws, {
+          code: 'UNKNOWN_GAME',
+          message: 'That game is not one this server can host.',
+          actionId: message.actionId,
+        });
+        return;
+      }
       const result = await manager.createRoom(message.displayName, message.target, gameId);
       const value = handleResult(ws, result, message.actionId);
       if (!value) return;

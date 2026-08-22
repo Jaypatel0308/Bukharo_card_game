@@ -21,3 +21,6 @@ blob-report/
 
 # OS noise
 .DS_Store
+
+# Coverage output
+coverage/

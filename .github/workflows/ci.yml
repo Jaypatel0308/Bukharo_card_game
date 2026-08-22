@@ -30,6 +30,26 @@ jobs:
       # dependencies and there is nothing to build without them.
       - run: npm ci --include=dev
 
+      # Only what actually ships can fail the build. The dev toolchain carries
+      # advisories of its own — a bug in the test runner is not a bug in the
+      # game — and those are reported in the step below without blocking.
+      - name: Audit what ships
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Audit the toolchain (advisory only)
+        if: always()
+        run: |
+          npm audit --audit-level=moderate > audit.txt 2>&1 || true
+          {
+            echo '### Dev dependency advisories'
+            echo
+            echo 'Not blocking: these are build and test tools, not shipped code.'
+            echo
+            echo '```'
+            tail -20 audit.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
       # Bugs rather than style: hook dependencies, unused bindings, missing
       # accessibility attributes. Warnings fail too, so suppressions stay
       # deliberate instead of accumulating.
@@ -42,6 +62,36 @@ jobs:
       # The engine suite, the server suite against a real process, and the
       # client suite in jsdom.
       - run: npm test
+
+  coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci --include=dev
+
+      # Reported, not enforced. A threshold here would mostly measure how much
+      # of the client the jsdom suite happens to touch, when the browser job is
+      # what actually covers it. The number is for reading, not for gating.
+      - name: Measure coverage
+        run: |
+          npm run coverage > coverage.txt 2>&1 || true
+          {
+            echo '### Coverage'
+            echo
+            echo 'Engine and server line coverage; the client is largely covered'
+            echo 'by the browser job, which this does not see.'
+            echo
+            echo '```'
+            grep -E "all files|All files" coverage.txt || tail -5 coverage.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
   browser:
     name: browser
@@ -69,3 +119,42 @@ jobs:
           name: playwright-traces
           path: test-results/
           retention-days: 7
+
+  # Everything above proves the code is good. This proves the site is.
+  #
+  # A green build says nothing about what players connect to: a failed deploy,
+  # a stale bundle or a missing variable all look fine from CI until somebody
+  # tries to start a game. This waits for Render to put this commit live and
+  # then plays the first few seconds of one.
+  deployed:
+    name: deployed site
+    needs: [test, browser]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci --include=dev
+
+      - name: Smoke test the deployment
+        env:
+          DEPLOY_URL: ${{ vars.DEPLOY_URL }}
+        run: |
+          if [ -z "$DEPLOY_URL" ]; then
+            {
+              echo '### Deploy smoke test skipped'
+              echo
+              echo 'No `DEPLOY_URL` repository variable is set, so there is no'
+              echo 'site to test. Add it under Settings → Secrets and variables'
+              echo '→ Actions → Variables, e.g. `https://bukharo.onrender.com`.'
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "DEPLOY_URL is not set — skipping."
+            exit 0
+          fi
+          node scripts/smoke.mjs "$DEPLOY_URL" "${{ github.sha }}"

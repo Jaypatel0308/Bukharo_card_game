@@ -1,6 +1,6 @@
 import type { WildAssignment } from '@bukharo/shared';
 
-import { SUIT_SYMBOL } from '../ui/cards';
+import { SUIT_SYMBOL } from '../../ui/cards';
 
 interface Props {
   options: WildAssignment[][];

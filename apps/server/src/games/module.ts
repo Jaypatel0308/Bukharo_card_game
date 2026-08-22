@@ -51,6 +51,18 @@ export interface CreateOptions {
   teamNames: Record<string, string>;
 }
 
+/**
+ * Engines write log entries without a clock, so the wall time is applied here.
+ * Entries already stamped are left alone, which is what the loop stops on.
+ */
+export function stampRecentLog(log: Array<{ timestamp: number }>, now: number): void {
+  for (let i = log.length - 1; i >= 0; i--) {
+    const entry = log[i]!;
+    if (entry.timestamp > 1e12) break;
+    entry.timestamp = now;
+  }
+}
+
 export interface GameModule {
   id: GameId;
 
@@ -75,8 +87,14 @@ export interface GameModule {
   /** Whose turn it is, for the disconnect handling the room does. */
   currentPlayerId(state: unknown): string | null;
 
-  /** Moves past a player who has gone; the room decides when that is allowed. */
-  skipCurrentPlayer(state: unknown, reason: string): unknown;
+  /**
+   * Moves past a player who has gone; the room decides when that is allowed.
+   *
+   * Takes the settings like every other method that can change the game: a
+   * forced play may finish a hand, and finishing a hand needs to know what the
+   * match is being played to.
+   */
+  skipCurrentPlayer(state: unknown, reason: string, settings: unknown): unknown;
 
   renameTeam(state: unknown, teamId: string, name: string): unknown;
 

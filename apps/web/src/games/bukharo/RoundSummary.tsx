@@ -1,7 +1,7 @@
 import type { GameView, TeamId } from '@bukharo/game-engine';
 import type { RoomView } from '@bukharo/shared';
 
-import type { Bukharo } from '../state/useBukharo';
+import type { Bukharo } from '../../state/useBukharo';
 
 interface Props {
   app: Bukharo;

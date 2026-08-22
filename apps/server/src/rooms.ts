@@ -395,7 +395,7 @@ export class RoomManager {
         );
       }
 
-      room.game = module.skipCurrentPlayer(room.game, 'disconnected');
+      room.game = module.skipCurrentPlayer(room.game, 'disconnected', room.settings);
       module.stampLog(room.game, Date.now());
       room.waitingForPlayerId = null;
       room.waitingSince = null;

@@ -19,7 +19,7 @@ import {
 } from '@bukharo/game-engine';
 import { clampTarget, describeGame, type GameSnapshot } from '@bukharo/shared';
 
-import type { CreateOptions, GameModule, GameOutcome, GamePhase } from './module.js';
+import { stampRecentLog, type CreateOptions, type GameModule, type GameOutcome, type GamePhase } from './module.js';
 
 const RANKS = new Set(['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']);
 const SUITS = new Set(['clubs', 'diamonds', 'hearts', 'spades']);
@@ -163,6 +163,7 @@ export const bukharoModule: GameModule = {
   },
 
   skipCurrentPlayer(state, reason) {
+    // Bukharo can simply pass the turn: nothing is owed to the table.
     return forceSkipTurn(asState(state), reason);
   },
 
@@ -171,11 +172,6 @@ export const bukharoModule: GameModule = {
   },
 
   stampLog(state, now) {
-    const game = asState(state);
-    for (let i = game.log.length - 1; i >= 0; i--) {
-      const entry = game.log[i]!;
-      if (entry.timestamp > 1e12) break;
-      entry.timestamp = now;
-    }
+    stampRecentLog(asState(state).log, now);
   },
 };

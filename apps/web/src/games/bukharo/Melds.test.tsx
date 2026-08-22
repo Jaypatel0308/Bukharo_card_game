@@ -4,7 +4,7 @@ import { createDeck } from '@bukharo/game-engine';
 import type { Card, Meld, MeldCard, NaturalRank, Suit, TeamId } from '@bukharo/game-engine';
 
 import { Melds } from './Melds';
-import { fanOverlapFor } from '../ui/meldFan';
+import { fanOverlapFor } from './meldFan';
 
 afterEach(cleanup);
 

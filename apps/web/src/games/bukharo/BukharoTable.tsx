@@ -2,21 +2,21 @@ import { useMemo, useState } from 'react';
 import { validateMeld, validateOpeningRun } from '@bukharo/game-engine';
 import type { Card, GameView, Seat, TeamId } from '@bukharo/game-engine';
 
-import { ActionBar } from '../components/ActionBar';
-import { ActivityStrip } from '../components/ActivityStrip';
-import { DiscardPileView } from '../components/DiscardPileView';
-import { GameLog } from '../components/GameLog';
-import { Hand } from '../components/Hand';
-import { Melds } from '../components/Melds';
-import { OpponentSeat } from '../components/OpponentSeat';
-import { RoundSummary } from '../components/RoundSummary';
-import { Scoreboard } from '../components/Scoreboard';
-import { StalledTurn } from '../components/StalledTurn';
-import { TableCentre } from '../components/TableCentre';
-import { TopBar } from '../components/TopBar';
-import { WildChooser } from '../components/WildChooser';
-import type { Bukharo } from '../state/useBukharo';
-import { isMuted, setMuted } from '../sound';
+import { ActionBar } from './ActionBar';
+import { ActivityStrip } from './ActivityStrip';
+import { DiscardPileView } from './DiscardPileView';
+import { GameLog } from '../../components/GameLog';
+import { Hand } from '../../components/Hand';
+import { Melds } from './Melds';
+import { OpponentSeat } from './OpponentSeat';
+import { RoundSummary } from './RoundSummary';
+import { Scoreboard } from './Scoreboard';
+import { StalledTurn } from '../../components/StalledTurn';
+import { TableCentre } from './TableCentre';
+import { TopBar } from './TopBar';
+import { WildChooser } from './WildChooser';
+import type { Bukharo } from '../../state/useBukharo';
+import { isMuted, setMuted } from '../../sound';
 
 const CLOCKWISE: Seat[] = ['NORTH', 'EAST', 'SOUTH', 'WEST'];
 
@@ -30,7 +30,7 @@ function arrange(game: GameView, youSeat: Seat | null) {
 
 type Drawer = 'none' | 'score' | 'log' | 'discard';
 
-export function Table({ app, game }: { app: Bukharo; game: GameView }) {
+export function BukharoTable({ app, game }: { app: Bukharo; game: GameView }) {
   const room = app.room!;
   const rules = room.rules!;
   const you = game.you;

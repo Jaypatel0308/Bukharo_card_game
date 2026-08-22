@@ -1,6 +1,6 @@
 import type { MindiView } from '@bukharo/shared';
 
-import { initialsOf } from '../../components/TopBar';
+import { initialsOf } from '../../ui/teams';
 
 interface Props {
   view: MindiView;

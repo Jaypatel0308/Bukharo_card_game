@@ -133,6 +133,46 @@ export default tseslint.config(
     },
   },
 
+  /*
+   * The two tables are as separate as the two engines.
+   *
+   * Anything genuinely common — a card face, a hand, a log — lives in
+   * components/ or ui/ and is shared deliberately. Reaching sideways from one
+   * game's folder into the other's is how that distinction quietly rots.
+   */
+  {
+    files: ['apps/web/src/games/mindi/**/*.{ts,tsx}'],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/bukharo/*', '../bukharo/*'],
+              message: 'Mindi must not borrow from Bukharo’s table.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['apps/web/src/games/bukharo/**/*.{ts,tsx}'],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/mindi/*', '../mindi/*'],
+              message: 'Bukharo must not borrow from Mindi’s table.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+
   // ---- Browser: the React client ----
   {
     files: ['apps/web/src/**/*.{ts,tsx}'],

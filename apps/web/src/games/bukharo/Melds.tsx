@@ -1,9 +1,9 @@
 import type { Meld, NaturalRank, TeamId } from '@bukharo/game-engine';
 
-import { PlayingCard } from './PlayingCard';
-import { initialsOf } from './TopBar';
-import { SUIT_SYMBOL } from '../ui/cards';
-import { fanOverlapFor } from '../ui/meldFan';
+import { PlayingCard } from '../../components/PlayingCard';
+import { initialsOf } from '../../ui/teams';
+import { SUIT_SYMBOL } from '../../ui/cards';
+import { fanOverlapFor } from './meldFan';
 
 interface Props {
   melds: Meld[];

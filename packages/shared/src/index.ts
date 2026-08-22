@@ -79,7 +79,16 @@ export interface RoomView {
 /* Client → server                                                     */
 /* ------------------------------------------------------------------ */
 
-export interface GameActionPayload {
+/**
+ * What a client may ask a game to do.
+ *
+ * A union rather than one loose shape, so the compiler checks each game's
+ * actions instead of waving them through. Every module still validates the
+ * payload again at runtime — types are erased, and the server is the
+ * authority — but a table can no longer send its own game an action that game
+ * has never heard of.
+ */
+export interface BukharoActionPayload {
   type: 'DRAW_STOCK' | 'TAKE_DISCARD_PILE' | 'CREATE_MELD' | 'ADD_TO_MELD' | 'DISCARD';
   cardIds?: string[];
   cardId?: string;
@@ -87,6 +96,13 @@ export interface GameActionPayload {
   meldType?: MeldType;
   wildAssignments?: WildAssignment[];
 }
+
+export type MindiActionPayload =
+  | { type: 'CHOOSE_MODE'; mode: 'HIDDEN' | 'KATTE' }
+  | { type: 'REVEAL_TRUMP' }
+  | { type: 'PLAY_CARD'; cardId: string };
+
+export type GameActionPayload = BukharoActionPayload | MindiActionPayload;
 
 export type ClientMessage =
   | {

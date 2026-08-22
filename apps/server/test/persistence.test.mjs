@@ -243,3 +243,164 @@ describe('surviving a restart (§61)', () => {
     client.close();
   });
 });
+
+describe('a Mindi hand surviving a restart (§61)', () => {
+  it('brings back the hand, the tally and the face-down card — still face down', async () => {
+    const names = ['Rahul', 'Maya', 'Priya', 'Sam'];
+    const host = await new Client(names[0]).connect();
+    host.send({ type: 'room:create', actionId: 'mc', displayName: names[0], target: 3, gameId: 'mindi' });
+    await host.waitFor((m) => m.type === 'session');
+    const code = host.session.roomCode;
+    const tokens = { [names[0]]: host.session.sessionToken };
+
+    const clients = [host];
+    for (const name of names.slice(1)) {
+      const client = await new Client(name).connect();
+      client.send({ type: 'room:join', actionId: `mj-${name}`, displayName: name, roomCode: code });
+      await client.waitFor((m) => m.type === 'session');
+      tokens[name] = client.session.sessionToken;
+      clients.push(client);
+    }
+
+    for (const client of clients) client.send({ type: 'player:ready', ready: true });
+    await host.waitForState((r) => r.players.every((p) => p.ready));
+    host.send({ type: 'game:start', actionId: 'ms' });
+    for (const client of clients) await client.waitForState((r) => r.game != null);
+
+    // Hide a card, so there is a secret to keep across the restart.
+    const chooserId = host.room.game.view.chooserId;
+    const chooser = clients.find((c) => c.room.youId === chooserId);
+    chooser.send({ type: 'game:action', actionId: 'mode', action: { type: 'CHOOSE_MODE', mode: 'HIDDEN' } });
+    for (const client of clients) {
+      await client.waitForState((r) => r.game?.view.status === 'PLAYING');
+    }
+
+    // Lead one card, so the saved hand is mid-trick rather than freshly dealt.
+    const leaderId = host.room.game.view.currentPlayerId;
+    const leader = clients.find((c) => c.room.youId === leaderId);
+    const led = leader.room.game.view.you.hand[0].id;
+    leader.send({ type: 'game:action', actionId: 'lead', action: { type: 'PLAY_CARD', cardId: led } });
+    for (const client of clients) {
+      await client.waitForState((r) => r.game?.view.currentTrick.plays.length === 1);
+    }
+
+    const chooserName = chooser.room.players.find((p) => p.id === chooserId).displayName;
+    const other = clients.find((c) => c.room.youId !== chooserId);
+    const otherName = other.room.players.find((p) => p.id === other.room.youId).displayName;
+
+    const before = {
+      hiddenCard: chooser.room.game.view.yourHiddenCard,
+      chooserHand: chooser.room.game.view.you.hand.map((c) => c.id),
+      otherHand: other.room.game.view.you.hand.map((c) => c.id),
+      currentPlayerId: chooser.room.game.view.currentPlayerId,
+      trick: chooser.room.game.view.currentTrick.plays.map((p) => p.card.id),
+      handNumber: chooser.room.game.view.handNumber,
+      kotTarget: chooser.room.game.view.kotTarget,
+    };
+    assert.ok(before.hiddenCard, 'the chooser should be able to see their own hidden card');
+
+    for (const client of clients) client.close();
+    await stopServer();
+
+    // The secret must be on disk — a hidden card that is not saved is a hand
+    // that cannot be finished.
+    // An earlier test leaves a deliberately corrupt file here, so read past
+    // anything that will not parse rather than assuming every file is a room.
+    const files = (await fs.readdir(path.join(dataDir, 'rooms'))).filter((f) => f.endsWith('.json'));
+    const parsed = await Promise.all(
+      files.map(async (f) => {
+        try {
+          return { f, json: JSON.parse(await fs.readFile(path.join(dataDir, 'rooms', f), 'utf8')) };
+        } catch {
+          return null;
+        }
+      }),
+    );
+    const mindiFile = parsed.find((entry) => entry?.json.gameId === 'mindi');
+    assert.ok(mindiFile, 'the Mindi room should be on disk');
+    assert.equal(mindiFile.json.game.hiddenCard.id, before.hiddenCard.id);
+    assert.equal(mindiFile.json.game.mode, 'HIDDEN');
+
+    await startServer();
+
+    // The chooser gets their secret back.
+    const backAsChooser = await new Client(`${chooserName} again`).connect();
+    backAsChooser.send({ type: 'session:resume', sessionToken: tokens[chooserName] });
+    const chooserRoom = await backAsChooser.waitForState((r) => r.game != null);
+
+    assert.equal(chooserRoom.game.gameId, 'mindi');
+    assert.equal(chooserRoom.game.view.yourHiddenCard.id, before.hiddenCard.id);
+    assert.deepEqual(chooserRoom.game.view.you.hand.map((c) => c.id), before.chooserHand);
+    assert.equal(chooserRoom.game.view.currentPlayerId, before.currentPlayerId);
+    assert.deepEqual(chooserRoom.game.view.currentTrick.plays.map((p) => p.card.id), before.trick);
+    assert.equal(chooserRoom.game.view.handNumber, before.handNumber);
+    assert.equal(chooserRoom.game.view.kotTarget, before.kotTarget);
+    assert.equal(chooserRoom.game.view.mode, 'HIDDEN');
+    assert.equal(chooserRoom.game.view.hiddenRevealed, false);
+
+    // And nobody else does. A restart is exactly the moment a redaction
+    // boundary could be rebuilt wrongly.
+    const backAsOther = await new Client(`${otherName} again`).connect();
+    backAsOther.send({ type: 'session:resume', sessionToken: tokens[otherName] });
+    const otherRoom = await backAsOther.waitForState((r) => r.game != null);
+
+    assert.equal(otherRoom.game.view.yourHiddenCard, null, 'the hidden card leaked after a restart');
+    assert.equal(otherRoom.game.view.hiddenCardWaiting, true);
+    assert.deepEqual(otherRoom.game.view.you.hand.map((c) => c.id), before.otherHand);
+    // Nor may anyone see another player's cards.
+    assert.equal(
+      JSON.stringify(otherRoom.game.view.players).includes(before.chooserHand[0]),
+      false,
+      'another player’s hand leaked after a restart',
+    );
+
+    backAsChooser.close();
+    backAsOther.close();
+  });
+});
+
+describe('Mindi replays a repeated action only once', () => {
+  it('treats the same actionId twice as one play', async () => {
+    const names = ['Ana', 'Bo', 'Cy', 'Dee'];
+    const host = await new Client(names[0]).connect();
+    host.send({ type: 'room:create', actionId: 'ic', displayName: names[0], target: 3, gameId: 'mindi' });
+    await host.waitFor((m) => m.type === 'session');
+    const code = host.session.roomCode;
+
+    const clients = [host];
+    for (const name of names.slice(1)) {
+      const client = await new Client(name).connect();
+      client.send({ type: 'room:join', actionId: `ij-${name}`, displayName: name, roomCode: code });
+      await client.waitFor((m) => m.type === 'session');
+      clients.push(client);
+    }
+    for (const client of clients) client.send({ type: 'player:ready', ready: true });
+    await host.waitForState((r) => r.players.every((p) => p.ready));
+    host.send({ type: 'game:start', actionId: 'is' });
+    for (const client of clients) await client.waitForState((r) => r.game != null);
+
+    const chooserId = host.room.game.view.chooserId;
+    const chooser = clients.find((c) => c.room.youId === chooserId);
+    chooser.send({ type: 'game:action', actionId: 'imode', action: { type: 'CHOOSE_MODE', mode: 'KATTE' } });
+    for (const client of clients) await client.waitForState((r) => r.game?.view.status === 'PLAYING');
+
+    const leaderId = host.room.game.view.currentPlayerId;
+    const leader = clients.find((c) => c.room.youId === leaderId);
+    const card = leader.room.game.view.you.hand[0].id;
+    const handBefore = leader.room.game.view.you.hand.length;
+
+    // The same play twice — a double tap, or a retry after a flaky socket.
+    leader.send({ type: 'game:action', actionId: 'same', action: { type: 'PLAY_CARD', cardId: card } });
+    await leader.waitForState((r) => r.game?.view.currentTrick.plays.length === 1);
+    leader.send({ type: 'game:action', actionId: 'same', action: { type: 'PLAY_CARD', cardId: card } });
+
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    const view = leader.room.game.view;
+    assert.equal(view.currentTrick.plays.length, 1, 'the card was played twice');
+    assert.equal(view.you.hand.length, handBefore - 1);
+    assert.equal(view.currentPlayerId !== leaderId, true, 'the turn moved on exactly once');
+
+    for (const client of clients) client.close();
+  });
+});

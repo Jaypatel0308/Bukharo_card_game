@@ -57,6 +57,7 @@ function draftOf(state: MindiState): MindiState {
 }
 
 const MAX_LOG_ENTRIES = 300;
+const MAX_HAND_HISTORY = 50;
 
 function log(draft: MindiState, playerId: string | null, type: string, message: string): void {
   draft.seqCounter += 1;
@@ -529,6 +530,12 @@ export function endHand(draft: MindiState, rules: MindiRules, events: MindiEvent
     kotAfter: { TEAM_A: draft.teams.TEAM_A.kot, TEAM_B: draft.teams.TEAM_B.kot },
   };
   draft.handHistory.push(result);
+  // A match to five Kot can run to hundreds of hands. The running tally lives
+  // on the teams, so the history is only a record — bound it the way the log
+  // is bound, or every room file and every broadcast grows without end.
+  if (draft.handHistory.length > MAX_HAND_HISTORY) {
+    draft.handHistory.splice(0, draft.handHistory.length - MAX_HAND_HISTORY);
+  }
 
   log(
     draft,

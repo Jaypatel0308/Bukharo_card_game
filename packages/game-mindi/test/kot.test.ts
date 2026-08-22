@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 
 import { startNextHand } from '../src/engine.js';
 import { seededRng } from '../src/random.js';
+import { viewMindiFor } from '../src/view.js';
 import { applyOrThrow, card, newMatch, playTrick, rules, scenario } from './helpers.js';
 
 /** A four-player state one trick from the end, with the tallies dictated. */
@@ -187,6 +188,30 @@ describe('the next hand (§8, §14, §59)', () => {
     assert.throws(
       () => applyOrThrow(done, { type: 'PLAY_CARD', playerId: done.currentPlayerId, cardId: 'anything' }),
       /GAME_NOT_PLAYING/,
+    );
+  });
+});
+
+describe('the record of past hands stays bounded', () => {
+  it('keeps the latest hands and forgets the rest', () => {
+    const many = Array.from({ length: 140 }, (_, i) => ({
+      handNumber: i + 1,
+      winningTeamId: 'TEAM_A' as const,
+      decidedBy: 'MINDIS' as const,
+      mindis: { TEAM_A: 3, TEAM_B: 1 },
+      tricks: { TEAM_A: 7, TEAM_B: 6 },
+      sweep: false,
+      kotAfter: { TEAM_A: 0, TEAM_B: 0 },
+    }));
+    const state = { ...newMatch(4), handHistory: many };
+
+    // The view is what crosses the wire on every single play.
+    const view = viewMindiFor(state, 'p1');
+    assert.equal(view.handHistory.length <= 12, true, 'the whole history was broadcast');
+    assert.equal(
+      view.handHistory.at(-1)!.handNumber,
+      140,
+      'the hand just finished must survive — the table shows it',
     );
   });
 });

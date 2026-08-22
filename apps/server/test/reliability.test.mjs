@@ -218,13 +218,13 @@ describe('input from a client is never trusted', () => {
   it('shrugs off malformed wild assignments instead of erroring internally', async () => {
     const { host, all } = await seatFour();
     await startMatch(all, host);
-    const currentId = host.room.game.currentPlayerId;
+    const currentId = host.room.game.view.currentPlayerId;
     const active = all.find((c) => c.room.youId === currentId);
 
     active.send({ type: 'game:action', actionId: 'w1', action: { type: 'DRAW_STOCK' } });
-    await active.waitForState((r) => r.game?.turnPhase === 'PLAYING_CARDS');
+    await active.waitForState((r) => r.game?.view.turnPhase === 'PLAYING_CARDS');
 
-    const cardIds = active.room.game.you.hand.slice(0, 3).map((c) => c.id);
+    const cardIds = active.room.game.view.you.hand.slice(0, 3).map((c) => c.id);
     active.send({
       type: 'game:action',
       actionId: 'w2',
@@ -242,7 +242,7 @@ describe('a turn nobody is playing', () => {
     const { host, all } = await seatFour();
     await startMatch(all, host);
 
-    const currentId = host.room.game.currentPlayerId;
+    const currentId = host.room.game.view.currentPlayerId;
     const absent = all.find((c) => c.room.youId === currentId);
     const present = all.filter((c) => c !== absent);
 
@@ -255,11 +255,11 @@ describe('a turn nobody is playing', () => {
 
     holder.send({ type: 'host:skipTurn' });
     const after = await holder.waitFor(
-      (m) => m.type === 'room:state' && m.room.game && m.room.game.currentPlayerId !== currentId,
+      (m) => m.type === 'room:state' && m.room.game && m.room.game.view.currentPlayerId !== currentId,
     ).then((m) => m.room);
 
-    assert.notEqual(after.game.currentPlayerId, currentId);
-    assert.equal(after.game.turnPhase, 'AWAITING_DRAW');
+    assert.notEqual(after.game.view.currentPlayerId, currentId);
+    assert.equal(after.game.view.turnPhase, 'AWAITING_DRAW');
     assert.equal(after.waitingForPlayerId, null);
 
     for (const client of all) client.close();
@@ -286,7 +286,7 @@ describe('a turn nobody is playing', () => {
     // And the room is still usable afterwards.
     host.send({ type: 'match:restart', actionId: 'again' });
     const restarted = await host.waitForState((r) => r.status === 'PLAYING');
-    assert.equal(restarted.game.roundNumber, 1);
+    assert.equal(restarted.game.view.roundNumber, 1);
 
     for (const client of all) client.close();
   });

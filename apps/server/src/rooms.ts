@@ -1,39 +1,23 @@
-import { randomInt, randomFillSync } from 'node:crypto';
+import { randomInt } from 'node:crypto';
+
 
 import {
-  DEFAULT_RULES,
-  DEFAULT_TEAM_NAMES,
-  forceSkipTurn,
-  SEAT_ORDER,
-  applyAction,
-  createMatch,
-  cryptoRng,
-  setTeamName,
-  startNextRound,
-  viewFor,
-  type EngineEvent,
-  type GameAction,
-  type GameState,
-  type Seat,
-  type TeamId,
-} from '@bukharo/game-engine';
-import {
   DEFAULT_GAME,
-  MAX_TARGET_SCORE,
-  MIN_TARGET_SCORE,
   ROOM_CODE_ALPHABET,
   ROOM_CODE_LENGTH,
   describeGame,
   teamForPosition,
   whyCannotStart,
-  type GameActionPayload,
+  clampTarget,
   type GameId,
+  type GameSnapshot,
   type RoomView,
   type ServerError,
   type ServerErrorCode,
 } from '@bukharo/shared';
 
 import { config } from './config.js';
+import { moduleFor, type GameEvent } from './games/index.js';
 import {
   FileStore,
   ROOM_SCHEMA_VERSION,
@@ -43,12 +27,8 @@ import {
   type Room,
   type RoomPlayer,
   type Store,
+  type TeamId,
 } from './store.js';
-
-const rng = cryptoRng((array) => {
-  randomFillSync(array);
-  return array;
-});
 
 export type OpResult<T> = { ok: true; value: T } | { ok: false; error: ServerError };
 
@@ -74,7 +54,7 @@ export interface JoinResult {
 
 export interface ActionResult {
   room: Room;
-  events: EngineEvent[];
+  events: GameEvent[];
 }
 
 export class RoomManager {
@@ -151,7 +131,7 @@ export class RoomManager {
 
   async createRoom(
     displayName: string,
-    targetScore: number,
+    target: number,
     gameId: GameId = DEFAULT_GAME,
   ): Promise<OpResult<JoinResult>> {
     const name = cleanName(displayName);
@@ -176,9 +156,9 @@ export class RoomManager {
       gameId,
       code: this.generateRoomCode(),
       status: 'LOBBY',
-      targetScore: clampTarget(targetScore),
-      rules: { ...DEFAULT_RULES, targetScore: clampTarget(targetScore) },
-      teamNames: { ...DEFAULT_TEAM_NAMES },
+      target: clampTarget(describeGame(gameId), target),
+      settings: moduleFor(gameId).settingsFor(target),
+      teamNames: { TEAM_A: 'Team A', TEAM_B: 'Team B' },
       players: [player],
       game: null,
       createdAt: now,
@@ -298,12 +278,12 @@ export class RoomManager {
     });
   }
 
-  async updateSettings(roomId: string, hostId: string, targetScore: number): Promise<OpResult<Room>> {
+  async updateSettings(roomId: string, hostId: string, target: number): Promise<OpResult<Room>> {
     return this.mutate(roomId, hostId, (room, host) => {
       if (!host.isHost) return fail('NOT_HOST', 'Only the host can change match settings.');
       if (room.status !== 'LOBBY') return fail('ROOM_IN_PROGRESS', 'Settings are locked once the match starts.');
-      room.targetScore = clampTarget(targetScore);
-      room.rules = { ...room.rules, targetScore: room.targetScore };
+      room.target = clampTarget(describeGame(room.gameId), target);
+      room.settings = moduleFor(room.gameId).settingsFor(room.target);
       return { ok: true as const, value: room };
     });
   }
@@ -316,10 +296,10 @@ export class RoomManager {
   ): Promise<OpResult<Room>> {
     return this.mutate(roomId, hostId, (room, host) => {
       if (!host.isHost) return fail('NOT_HOST', 'Only the host can rename the teams.');
-      const clean = cleanName(name) || DEFAULT_TEAM_NAMES[teamId];
+      const clean = cleanName(name) || (teamId === 'TEAM_A' ? 'Team A' : 'Team B');
       room.teamNames[teamId] = clean;
       // A match in progress carries its own copy, used by the game log.
-      if (room.game) room.game = setTeamName(room.game, teamId, clean);
+      if (room.game) room.game = moduleFor(room.gameId).renameTeam(room.game, teamId, clean);
       return { ok: true as const, value: room };
     });
   }
@@ -345,15 +325,7 @@ export class RoomManager {
         return fail('NOT_READY', `Still waiting for ${waiting.map((p) => p.displayName).join(', ')}.`);
       }
 
-      room.game = createMatch({
-        roomId: room.id,
-        seats: bukharoSeating(room),
-        targetScore: room.targetScore,
-        rules: room.rules,
-        rng,
-        teamNames: room.teamNames,
-      });
-      stampLog(room.game);
+      room.game = startMatch(room);
       room.status = 'PLAYING';
       room.processedActions[actionId] = Date.now();
       return { ok: true as const, value: room };
@@ -367,8 +339,9 @@ export class RoomManager {
       if (room.status !== 'ROUND_END' || !room.game) {
         return fail('WRONG_PHASE', 'The next round can only be dealt once the current round has finished.');
       }
-      room.game = startNextRound(room.game, room.rules, rng);
-      stampLog(room.game);
+      const module = moduleFor(room.gameId);
+      room.game = module.startNextRound(room.game, room.settings);
+      module.stampLog(room.game, Date.now());
       room.status = 'PLAYING';
       room.processedActions[actionId] = Date.now();
       return { ok: true as const, value: room };
@@ -382,15 +355,7 @@ export class RoomManager {
       if (room.status !== 'MATCH_END' && room.status !== 'ABANDONED') {
         return fail('WRONG_PHASE', 'Finish the current match first.');
       }
-      room.game = createMatch({
-        roomId: room.id,
-        seats: bukharoSeating(room),
-        targetScore: room.targetScore,
-        rules: room.rules,
-        rng,
-        teamNames: room.teamNames,
-      });
-      stampLog(room.game);
+      room.game = startMatch(room);
       room.status = 'PLAYING';
       room.processedActions[actionId] = Date.now();
       return { ok: true as const, value: room };
@@ -408,7 +373,9 @@ export class RoomManager {
       if (room.status !== 'PLAYING' || !room.game) {
         return fail('WRONG_PHASE', 'There is no turn to skip right now.');
       }
-      const current = room.players.find((p) => p.id === room.game!.currentPlayerId);
+      const module = moduleFor(room.gameId);
+      const currentId = module.currentPlayerId(room.game);
+      const current = room.players.find((p) => p.id === currentId);
       if (!current) return fail('NOT_IN_ROOM', 'That player is no longer in the room.');
       if (current.connected) {
         return fail('WRONG_PHASE', `${current.displayName} is still connected — it is their turn to play.`);
@@ -422,8 +389,8 @@ export class RoomManager {
         );
       }
 
-      room.game = forceSkipTurn(room.game, 'disconnected');
-      stampLog(room.game);
+      room.game = module.skipCurrentPlayer(room.game, 'disconnected');
+      module.stampLog(room.game, Date.now());
       room.waitingForPlayerId = null;
       room.waitingSince = null;
       return { ok: true as const, value: room };
@@ -448,7 +415,7 @@ export class RoomManager {
     roomId: string,
     playerId: string,
     actionId: string,
-    payload: GameActionPayload,
+    payload: unknown,
   ): Promise<OpResult<ActionResult>> {
     return this.mutate(roomId, playerId, (room) => {
       if (!room.game || room.status !== 'PLAYING') {
@@ -456,22 +423,28 @@ export class RoomManager {
       }
       // §59 — a retried message must not play the move twice.
       if (alreadyProcessed(room, actionId)) {
-        return { ok: true as const, value: { room, events: [] as EngineEvent[] } };
+        return { ok: true as const, value: { room, events: [] as GameEvent[] } };
       }
 
-      const action = toGameAction(payload, playerId);
+      const module = moduleFor(room.gameId);
+      const action = module.parseAction(payload, playerId);
       if (!action) return fail('INVALID_MESSAGE', 'That action was not understood.');
 
-      const result = applyAction(room.game, action, room.rules);
+      const result = module.applyAction(room.game, action, room.settings);
       if (!result.ok) {
-        return fail(result.code, result.message, result.options ? { options: result.options } : {});
+        return fail(
+          result.code as ServerErrorCode,
+          result.message,
+          result.options ? { options: result.options as ServerError['options'] } : {},
+        );
       }
 
       room.game = result.state;
-      stampLog(room.game);
+      module.stampLog(room.game, Date.now());
       room.processedActions[actionId] = Date.now();
-      if (room.game.status === 'ROUND_END') room.status = 'ROUND_END';
-      else if (room.game.status === 'MATCH_END') room.status = 'MATCH_END';
+      const phase = module.phaseOf(room.game);
+      if (phase === 'ROUND_END') room.status = 'ROUND_END';
+      else if (phase === 'MATCH_END') room.status = 'MATCH_END';
 
       return { ok: true as const, value: { room, events: result.events } };
     });
@@ -501,7 +474,8 @@ export class RoomManager {
       player.lastSeenAt = Date.now();
 
       // §54 — pause the table when the active player drops.
-      if (room.status === 'PLAYING' && room.game?.currentPlayerId === playerId) {
+      const onTurn = room.game ? moduleFor(room.gameId).currentPlayerId(room.game) : null;
+      if (room.status === 'PLAYING' && onTurn === playerId) {
         room.waitingForPlayerId = playerId;
         room.waitingSince = Date.now();
       }
@@ -617,21 +591,6 @@ function isSeatable(room: Room, position: number): boolean {
   );
 }
 
-/**
- * Bukharo's engine speaks in compass seats. The room speaks in positions, so
- * they are translated here — the one place that knows both — keeping the
- * engine's own vocabulary out of the room layer.
- */
-function bukharoSeating(room: Room): Array<{ id: string; displayName: string; seat: Seat }> {
-  return [...room.players]
-    .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
-    .map((player, index) => ({
-      id: player.id,
-      displayName: player.displayName,
-      seat: SEAT_ORDER[index]!,
-    }));
-}
-
 function cleanName(name: string): string {
   return name.replace(/\s+/g, ' ').trim().slice(0, 20);
 }
@@ -647,10 +606,6 @@ function uniqueName(room: Room, name: string): string {
   return name;
 }
 
-function clampTarget(value: number): number {
-  if (!Number.isFinite(value)) return DEFAULT_RULES.targetScore;
-  return Math.min(MAX_TARGET_SCORE, Math.max(MIN_TARGET_SCORE, Math.round(value)));
-}
 
 function alreadyProcessed(room: Room, actionId: string): boolean {
   if (!actionId) return false;
@@ -664,46 +619,26 @@ function pruneProcessedActions(room: Room): void {
   }
 }
 
-/** The engine is clock-free; wall-clock stamps are applied here. */
-function stampLog(game: GameState): void {
-  const now = Date.now();
-  for (let i = game.log.length - 1; i >= 0; i--) {
-    const entry = game.log[i]!;
-    if (entry.timestamp > 1e12) break;
-    entry.timestamp = now;
-  }
-}
-
-function toGameAction(payload: GameActionPayload, playerId: string): GameAction | null {
-  switch (payload.type) {
-    case 'DRAW_STOCK':
-      return { type: 'DRAW_STOCK', playerId };
-    case 'TAKE_DISCARD_PILE':
-      return { type: 'TAKE_DISCARD_PILE', playerId };
-    case 'CREATE_MELD':
-      if (!Array.isArray(payload.cardIds)) return null;
-      return {
-        type: 'CREATE_MELD',
-        playerId,
-        cardIds: payload.cardIds.filter((id) => typeof id === 'string').slice(0, 30),
-        ...(payload.meldType ? { meldType: payload.meldType } : {}),
-        ...(payload.wildAssignments ? { wildAssignments: payload.wildAssignments } : {}),
-      };
-    case 'ADD_TO_MELD':
-      if (!Array.isArray(payload.cardIds) || typeof payload.meldId !== 'string') return null;
-      return {
-        type: 'ADD_TO_MELD',
-        playerId,
-        meldId: payload.meldId,
-        cardIds: payload.cardIds.filter((id) => typeof id === 'string').slice(0, 30),
-        ...(payload.wildAssignments ? { wildAssignments: payload.wildAssignments } : {}),
-      };
-    case 'DISCARD':
-      if (typeof payload.cardId !== 'string') return null;
-      return { type: 'DISCARD', playerId, cardId: payload.cardId };
-    default:
-      return null;
-  }
+/** Deals the first hand or round of a match, whatever game it is. */
+function startMatch(room: Room): unknown {
+  const module = moduleFor(room.gameId);
+  const game = module.createMatch(
+    {
+      roomId: room.id,
+      seats: [...room.players]
+        .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+        .map((player) => ({
+          id: player.id,
+          displayName: player.displayName,
+          position: player.position ?? 0,
+        })),
+      target: room.target,
+      teamNames: room.teamNames,
+    },
+    room.settings,
+  );
+  module.stampLog(game, Date.now());
+  return game;
 }
 
 /**
@@ -716,9 +651,8 @@ export function roomView(room: Room, viewerId: string | null): RoomView {
     roomCode: room.code,
     gameId: room.gameId,
     status: room.status,
-    targetScore: room.targetScore,
     hostId: room.players.find((p) => p.isHost)?.id ?? null,
-    teamNames: { ...DEFAULT_TEAM_NAMES, ...room.teamNames },
+    teamNames: { ...room.teamNames },
     players: room.players.map((player) => ({
       id: player.id,
       displayName: player.displayName,
@@ -732,8 +666,9 @@ export function roomView(room: Room, viewerId: string | null): RoomView {
       ready: player.ready,
       isHost: player.isHost,
     })),
-    game: room.game ? viewFor(room.game, viewerId) : null,
-    rules: room.rules,
+    game: (room.game ? moduleFor(room.gameId).viewFor(room.game, viewerId) : null) as GameSnapshot | null,
+    rules: room.gameId === 'bukharo' ? (room.settings as RoomView['rules']) : null,
+    target: room.target,
     youId: viewerId,
     cannotStartReason:
       room.status === 'LOBBY'

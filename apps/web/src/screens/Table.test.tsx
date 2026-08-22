@@ -33,7 +33,7 @@ function appFor(state: GameState, viewerId: string): Bukharo {
     roomCode: 'BKH7Q',
     gameId: 'bukharo',
     status: 'PLAYING',
-    targetScore: 2000,
+    target: 2000,
     hostId: 'p1',
     teamNames: { TEAM_A: 'Rockets', TEAM_B: 'Comets' },
     players: SEATS.map((s, position) => ({
@@ -46,7 +46,7 @@ function appFor(state: GameState, viewerId: string): Bukharo {
       ready: true,
       isHost: s.id === 'p1',
     })),
-    game: viewFor(state, viewerId),
+    game: { gameId: 'bukharo' as const, view: viewFor(state, viewerId) },
     rules: DEFAULT_RULES,
     youId: viewerId,
     cannotStartReason: null,
@@ -70,7 +70,7 @@ function appFor(state: GameState, viewerId: string): Bukharo {
     choosePosition: vi.fn(),
     assignPosition: vi.fn(),
     kickPlayer: vi.fn(),
-    setTargetScore: vi.fn(),
+    setTarget: vi.fn(),
     setTeamName: vi.fn(),
     endMatch: vi.fn(),
     skipAbsentPlayer: vi.fn(),
@@ -95,7 +95,7 @@ function layoutOrder(container: HTMLElement): string[] {
 describe('table layout', () => {
   it('puts the opponents’ melds above the centre and yours below it', () => {
     const state = gameState();
-    const { container } = render(<Table app={appFor(state, 'p1')} />);
+    const { container } = render(<Table app={appFor(state, 'p1')} game={viewFor(state, 'p1')} />);
 
     expect(layoutOrder(container)).toEqual([
       'melds--theirs',
@@ -114,7 +114,7 @@ describe('table layout', () => {
       ['p1', 'Rockets'],
       ['p2', 'Comets'],
     ] as const) {
-      const { container, unmount } = render(<Table app={appFor(state, viewerId)} />);
+      const { container, unmount } = render(<Table app={appFor(state, viewerId)} game={viewFor(state, viewerId)} />);
       const yours = container.querySelector('.melds--yours');
       expect(yours?.getAttribute('aria-label')).toBe(`${nearTeam} melds`);
       unmount();
@@ -123,7 +123,7 @@ describe('table layout', () => {
 
   it('shows the centre piles in the order wild, stock, discard', () => {
     const state = gameState();
-    const { container } = render(<Table app={appFor(state, 'p1')} />);
+    const { container } = render(<Table app={appFor(state, 'p1')} game={viewFor(state, 'p1')} />);
     const labels = [...container.querySelectorAll('.pileArea .pile__label')].map((el) =>
       (el.textContent ?? '').trim(),
     );
@@ -134,7 +134,7 @@ describe('table layout', () => {
 
   it('never renders another player’s cards', () => {
     const state = gameState();
-    const { container } = render(<Table app={appFor(state, 'p1')} />);
+    const { container } = render(<Table app={appFor(state, 'p1')} game={viewFor(state, 'p1')} />);
     const markup = container.innerHTML;
 
     const opponentCards = state.players.filter((p) => p.id !== 'p1').flatMap((p) => p.hand);

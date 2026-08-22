@@ -16,7 +16,7 @@ Open site → Create room → Share code → Friends join → Sit in teams → S
 ```bash
 npm install
 npm run build
-npm test          # 269 tests: two engines, server and web client
+npm test          # 275 tests: two engines, server and web client
 npm start         # http://localhost:8787
 ```
 
@@ -49,11 +49,20 @@ describe either.
 
 ## Hosting more than one game
 
-The room layer knows almost nothing about the game being played. A game is
-described in `packages/shared/src/games.ts` by what a *room* needs: how many
-people may sit down, which counts a match may start with, and what to call each
-seat. Cards, turns and scoring stay sealed inside the game's own engine, which
-the room, session, presence and persistence code never reads.
+The room layer knows nothing about the game being played. A game is described
+in `packages/shared/src/games.ts` by what a *room* needs — how many people may
+sit down, which counts a match may start with, what to call each seat, and what
+the match is played to — and is *implemented* by a module under
+`apps/server/src/games/`, which is the only code allowed to import an engine.
+
+The room stores the game's state as an opaque value it never inspects, and asks
+the module to create a match, apply an action, produce a view, or say whose
+turn it is. A lint rule refuses an engine import anywhere else in the server, so
+the room cannot drift back into knowing about melds or trumps.
+
+Adding a third game means a descriptor, an engine package and a module. Rooms,
+codes, sessions, reconnect, host transfer, presence, persistence, expiry,
+idempotency and rate limiting are untouched by any of it.
 
 Seats are positions in a ring, `0..n-1`, and a position's team is simply whether
 it is even or odd — which gives alternating seating and equal sides at any even
@@ -156,7 +165,7 @@ behaviour.
 npm run lint          # ESLint: bugs, not style
 npm run test:engine   # 75 Bukharo rule tests, no I/O
 npm run test:mindi    # 55 Mindi rule tests, no I/O
-npm run test:server   # 50 tests against a real server process
+npm run test:server   # 56 tests against a real server process
 npm run test:web      # 89 client tests (Vitest, jsdom)
 npm run test:e2e      # 29 browser tests (Playwright: desktop and phone)
 ```

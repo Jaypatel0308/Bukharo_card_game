@@ -1,5 +1,6 @@
-import type { TeamId, WildAssignment } from '@bukharo/game-engine';
 import { GAMES, isGameId, type GameId } from '@bukharo/shared';
+
+import type { TeamId } from './store.js';
 
 /**
  * Runtime validation of everything a client sends.
@@ -11,8 +12,6 @@ import { GAMES, isGameId, type GameId } from '@bukharo/shared';
  */
 
 const TEAM_IDS = new Set<string>(['TEAM_A', 'TEAM_B']);
-const RANKS = new Set<string>(['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']);
-const SUITS = new Set<string>(['clubs', 'diamonds', 'hearts', 'spades']);
 
 /** A place at the table, bounded by the largest table any game offers. */
 export function asPosition(value: unknown): number | null {
@@ -36,31 +35,4 @@ export function asString(value: unknown, maxLength = 64): string | null {
 
 export function asFiniteNumber(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
-}
-
-/**
- * Wild assignments are forwarded to the rule engine, so a malformed one would
- * surface as an internal error rather than a refusal. Anything that is not a
- * well-formed list is dropped, which simply falls back to the engine resolving
- * the wild card itself.
- */
-export function asWildAssignments(value: unknown): WildAssignment[] | undefined {
-  if (!Array.isArray(value) || value.length === 0 || value.length > 30) return undefined;
-
-  const assignments: WildAssignment[] = [];
-  for (const entry of value) {
-    if (!entry || typeof entry !== 'object') return undefined;
-    const { cardId, representedRank, representedSuit } = entry as Record<string, unknown>;
-    if (typeof cardId !== 'string' || cardId.length > 64) return undefined;
-    if (typeof representedRank !== 'string' || !RANKS.has(representedRank)) return undefined;
-    if (representedSuit !== null && (typeof representedSuit !== 'string' || !SUITS.has(representedSuit))) {
-      return undefined;
-    }
-    assignments.push({
-      cardId,
-      representedRank: representedRank as WildAssignment['representedRank'],
-      representedSuit: (representedSuit ?? null) as WildAssignment['representedSuit'],
-    });
-  }
-  return assignments;
 }

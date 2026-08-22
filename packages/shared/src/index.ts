@@ -8,9 +8,23 @@ import type {
   WildAssignment,
 } from '@bukharo/game-engine';
 
+import type { MindiView } from '@bukharo/game-mindi';
+
 import type { GameId } from './games.js';
 
 export type { GameView, RuleConfig, Seat, TeamId, WildAssignment };
+export type { MindiView };
+
+/**
+ * A game's state, as a client sees it.
+ *
+ * Tagged by game so the client can narrow to the right table. This is the one
+ * place that names both games — the seam between a room, which is the same
+ * whatever is being played, and the game inside it.
+ */
+export type GameSnapshot =
+  | { gameId: 'bukharo'; view: GameView }
+  | { gameId: 'mindi'; view: MindiView };
 export * from './games.js';
 
 /** §32 — no O/0 or I/1/l, so codes survive being read aloud. */
@@ -38,14 +52,16 @@ export interface RoomView {
   /** Which game this room is for. Fixed when the room is made. */
   gameId: GameId;
   status: RoomStatus;
-  targetScore: number;
   hostId: string | null;
   /** Host-editable display names for the two teams. */
   teamNames: Record<TeamId, string>;
   players: RoomPlayerView[];
   /** Null while the room is still in the lobby. */
-  game: GameView | null;
-  rules: RuleConfig;
+  game: GameSnapshot | null;
+  /** Bukharo's rule config, present only for a Bukharo room. */
+  rules: RuleConfig | null;
+  /** What the match is played to: a score for Bukharo, Kot for Mindi. */
+  target: number;
   /** Seat the viewer occupies, if any. */
   youId: string | null;
   /** Null when the host may start, otherwise why they may not. */
@@ -77,7 +93,7 @@ export type ClientMessage =
       type: 'room:create';
       actionId: string;
       displayName: string;
-      targetScore: number;
+      target: number;
       gameId: GameId;
     }
   | { type: 'room:join'; actionId: string; displayName: string; roomCode: string }
@@ -87,7 +103,7 @@ export type ClientMessage =
   | { type: 'seat:choose'; position: number }
   | { type: 'host:assignSeat'; playerId: string; position: number }
   | { type: 'host:kick'; playerId: string }
-  | { type: 'host:settings'; targetScore: number }
+  | { type: 'host:settings'; target: number }
   | { type: 'host:teamName'; teamId: TeamId; name: string }
   | { type: 'host:endMatch' }
   | { type: 'host:skipTurn' }
@@ -133,5 +149,3 @@ export type ServerMessage =
   | { type: 'pong' };
 
 export const TARGET_SCORE_OPTIONS = [1000, 1500, 2000, 3000] as const;
-export const MIN_TARGET_SCORE = 100;
-export const MAX_TARGET_SCORE = 20000;

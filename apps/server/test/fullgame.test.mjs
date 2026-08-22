@@ -157,8 +157,8 @@ async function syncTable(clients) {
     return clients.every(
       (c) =>
         c.room?.status === first.status &&
-        c.room?.game?.currentPlayerId === first.game.currentPlayerId &&
-        c.room?.game?.stateVersion === first.game.stateVersion,
+        c.room?.game?.view.currentPlayerId === first.game.view.currentPlayerId &&
+        c.room?.game?.view.stateVersion === first.game.view.stateVersion,
     );
   });
 }
@@ -226,28 +226,28 @@ async function act(client, action) {
  * abandoned half-played.
  */
 async function playTurn(clients) {
-  const currentId = clients[0].room.game.currentPlayerId;
+  const currentId = clients[0].room.game.view.currentPlayerId;
   const client = clients.find((c) => c.room.youId === currentId);
   const rules = clients[0].room.rules ?? DEFAULT_RULES;
 
   // Draw: prefer the stock, fall back to the pile (and vice versa), because
   // either source can legitimately be unavailable.
-  if (client.room.game.turnPhase === 'AWAITING_DRAW') {
-    const preferPile = client.room.game.discardPile.length > 0 && Math.random() < 0.25;
+  if (client.room.game.view.turnPhase === 'AWAITING_DRAW') {
+    const preferPile = client.room.game.view.discardPile.length > 0 && Math.random() < 0.25;
     const first = preferPile ? 'TAKE_DISCARD_PILE' : 'DRAW_STOCK';
     const second = preferPile ? 'DRAW_STOCK' : 'TAKE_DISCARD_PILE';
     let drew = await act(client, { type: first });
-    if (client.room.game?.turnPhase === 'AWAITING_DRAW' && client.room.status === 'PLAYING') {
+    if (client.room.game?.view.turnPhase === 'AWAITING_DRAW' && client.room.status === 'PLAYING') {
       drew = await act(client, { type: second });
     }
     if (client.room.status !== 'PLAYING') return true;
-    if (client.room.game.turnPhase === 'AWAITING_DRAW') return false;
+    if (client.room.game.view.turnPhase === 'AWAITING_DRAW') return false;
     void drew;
   }
 
   // Meld whatever is legal, a few attempts per turn.
   for (let attempt = 0; attempt < 4; attempt++) {
-    const game = client.room.game;
+    const game = client.room.game.view;
     if (game.turnPhase !== 'PLAYING_CARDS') break;
     const hand = game.you.hand;
     const opened = game.teams[game.you.teamId].isOpened;
@@ -300,12 +300,12 @@ async function playTurn(clients) {
 
   // Discard to end the turn, trying another card if the first is refused.
   if (client.room.status !== 'PLAYING') return true;
-  for (const card of [...(client.room.game.you.hand ?? [])].sort(() => Math.random() - 0.5)) {
+  for (const card of [...(client.room.game.view.you.hand ?? [])].sort(() => Math.random() - 0.5)) {
     if (client.room.status !== 'PLAYING') return true;
-    if (client.room.game.currentPlayerId !== currentId) return true;
+    if (client.room.game.view.currentPlayerId !== currentId) return true;
     if ((await act(client, { type: 'DISCARD', cardId: card.id })) === 'ok') return true;
   }
-  return client.room.game?.currentPlayerId !== currentId;
+  return client.room.game?.view.currentPlayerId !== currentId;
 }
 
 describe('a complete round played over the wire', () => {
@@ -339,7 +339,7 @@ describe('a complete round played over the wire', () => {
       turns++;
 
       // Invariant: nobody ever holds more than the table's worth of cards.
-      const game = host.room.game;
+      const game = host.room.game.view;
       const visible =
         game.players.reduce((total, p) => total + p.handCount, 0) +
         game.stockCount +
@@ -351,9 +351,15 @@ describe('a complete round played over the wire', () => {
     }
 
     assert.ok(turns < 250, 'the round should finish inside the turn budget');
+    // Guards against the meld loop quietly turning into a no-op, which is
+    // what happened when the snapshot gained a wrapper.
+    assert.ok(
+      host.room.game.view.melds.length > 0,
+      'the bots should have put melds on the table during a whole round',
+    );
     assert.equal(host.room.status === 'ROUND_END' || host.room.status === 'MATCH_END', true);
 
-    const record = host.room.game.scoreHistory.at(-1);
+    const record = host.room.game.view.scoreHistory.at(-1);
     assert.ok(record, 'a score record should exist');
     for (const teamId of ['TEAM_A', 'TEAM_B']) {
       const score = record.teams[teamId];
@@ -366,27 +372,27 @@ describe('a complete round played over the wire', () => {
           score.goingOutBonus -
           score.handPenalty,
       );
-      assert.equal(host.room.game.teams[teamId].matchScore, score.matchTotalAfter);
+      assert.equal(host.room.game.view.teams[teamId].matchScore, score.matchTotalAfter);
     }
 
     // Every client sees the same public result.
     for (const client of clients) {
-      await client.waitFor((m) => m.type === 'room:state' && m.room.game?.scoreHistory.length === 1);
-      assert.equal(client.room.game.teams.TEAM_A.matchScore, host.room.game.teams.TEAM_A.matchScore);
+      await client.waitFor((m) => m.type === 'room:state' && m.room.game?.view.scoreHistory.length === 1);
+      assert.equal(client.room.game.view.teams.TEAM_A.matchScore, host.room.game.view.teams.TEAM_A.matchScore);
     }
 
     // The host deals round two: opening state resets, match scores survive.
     if (host.room.status === 'ROUND_END') {
       host.send({ type: 'round:next', actionId: 'r2' });
-      const next = await host.nextState((room) => room.game?.roundNumber === 2);
+      const next = await host.nextState((room) => room.game?.view.roundNumber === 2);
       assert.equal(next.status, 'PLAYING');
-      assert.equal(next.game.teams.TEAM_A.isOpened, false);
-      assert.equal(next.game.teams.TEAM_B.isOpened, false);
-      assert.equal(next.game.melds.length, 0);
-      assert.equal(next.game.bucharooCount, 13);
-      assert.equal(next.game.you.hand.length, 13);
-      assert.equal(next.game.scoreHistory.length, 1);
-      assert.equal(next.game.teams.TEAM_A.matchScore, record.teams.TEAM_A.matchTotalAfter);
+      assert.equal(next.game.view.teams.TEAM_A.isOpened, false);
+      assert.equal(next.game.view.teams.TEAM_B.isOpened, false);
+      assert.equal(next.game.view.melds.length, 0);
+      assert.equal(next.game.view.bucharooCount, 13);
+      assert.equal(next.game.view.you.hand.length, 13);
+      assert.equal(next.game.view.scoreHistory.length, 1);
+      assert.equal(next.game.view.teams.TEAM_A.matchScore, record.teams.TEAM_A.matchTotalAfter);
     }
 
     for (const client of clients) client.close();

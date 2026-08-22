@@ -30,9 +30,9 @@ function arrange(game: GameView, youSeat: Seat | null) {
 
 type Drawer = 'none' | 'score' | 'log' | 'discard';
 
-export function Table({ app }: { app: Bukharo }) {
+export function Table({ app, game }: { app: Bukharo; game: GameView }) {
   const room = app.room!;
-  const game = room.game!;
+  const rules = room.rules!;
   const you = game.you;
   const teamNames = room.teamNames;
 
@@ -45,7 +45,7 @@ export function Table({ app }: { app: Bukharo }) {
   const isYourTurn = you !== null && game.currentPlayerId === you.id;
   const phase = game.turnPhase;
   const teamOpened = you ? game.teams[you.teamId].isOpened : false;
-  const minimumMeld = teamOpened ? room.rules.normalMeldMinimum : room.rules.openingRunMinimum;
+  const minimumMeld = teamOpened ? rules.normalMeldMinimum : rules.openingRunMinimum;
   const seats = useMemo(() => arrange(game, you?.seat ?? null), [game, you?.seat]);
 
   // Your team sits on your side of the table, the opponents across from you.
@@ -83,9 +83,9 @@ export function Table({ app }: { app: Bukharo }) {
   // honestly (§92). The server still validates every move for real.
   const meldPreview = useMemo(() => {
     if (!canSelectForMeld || selectedCards.length === 0) return null;
-    const ctx = { wildRank: game.wildRank, rules: room.rules };
+    const ctx = { wildRank: game.wildRank, rules };
     return teamOpened ? validateMeld(selectedCards, ctx) : validateOpeningRun(selectedCards, ctx);
-  }, [canSelectForMeld, selectedCards, teamOpened, game.wildRank, room.rules]);
+  }, [canSelectForMeld, selectedCards, teamOpened, game.wildRank, rules]);
 
   const addPreview = useMemo(() => {
     if (!canSelectForMeld || !teamOpened || selectedCards.length === 0 || !targetMeldId) return null;
@@ -93,10 +93,10 @@ export function Table({ app }: { app: Bukharo }) {
     if (!meld) return null;
     return validateMeld(
       [...meld.cards.map((c) => c.card), ...selectedCards],
-      { wildRank: game.wildRank, rules: room.rules },
+      { wildRank: game.wildRank, rules },
       meld.type,
     );
-  }, [canSelectForMeld, teamOpened, selectedCards, targetMeldId, game.melds, game.wildRank, room.rules]);
+  }, [canSelectForMeld, teamOpened, selectedCards, targetMeldId, game.melds, game.wildRank, rules]);
 
   // Explain a rejected selection, but only once enough cards are chosen to
   // judge it — nagging about "needs 4 cards" after the first tap is noise.
@@ -125,7 +125,7 @@ export function Table({ app }: { app: Bukharo }) {
         title={teamNames[teamId]}
         isOpened={game.teams[teamId].isOpened}
         wildRank={game.wildRank}
-        openingRunMinimum={room.rules.openingRunMinimum}
+        openingRunMinimum={rules.openingRunMinimum}
         isYours={teamId === you?.teamId}
         canAdd={canSelectForMeld && you?.teamId === teamId}
         selectableMeldId={targetMeldId}
@@ -240,7 +240,7 @@ export function Table({ app }: { app: Bukharo }) {
       )}
       {canSelectForMeld && !teamOpened && (
         <p className="hint hint--floating">
-          Your team is not open yet. Play a clean run of {room.rules.openingRunMinimum}+ cards in one suit —
+          Your team is not open yet. Play a clean run of {rules.openingRunMinimum}+ cards in one suit —
           no wilds — before anything else.
         </p>
       )}

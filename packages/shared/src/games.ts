@@ -10,7 +10,7 @@
  * the room, session, presence or persistence code changes.
  */
 
-export type GameId = 'bukharo';
+export type GameId = 'bukharo' | 'mindi';
 
 export interface GameDescriptor {
   id: GameId;
@@ -26,6 +26,17 @@ export interface GameDescriptor {
   startCounts: number[];
   /** Display name for a position at the table, e.g. "North" or "Seat 3". */
   seatLabel(position: number, playerCount: number): string;
+
+  /**
+   * Both games are played to a single number, so the protocol carries one
+   * `target` and each game says what it means.
+   */
+  targetLabel: string;
+  targetHint: string;
+  targetOptions: number[];
+  defaultTarget: number;
+  /** True once the client can actually draw this game's table. */
+  hasTable: boolean;
 }
 
 const COMPASS = ['North', 'East', 'South', 'West'];
@@ -38,6 +49,24 @@ export const GAMES: Record<GameId, GameDescriptor> = {
     maxPlayers: 4,
     startCounts: [4],
     seatLabel: (position) => COMPASS[position] ?? `Seat ${position + 1}`,
+    targetLabel: 'Play to',
+    targetHint: 'The first team past this score wins the match.',
+    targetOptions: [1000, 1500, 2000, 3000],
+    defaultTarget: 2000,
+    hasTable: true,
+  },
+  mindi: {
+    id: 'mindi',
+    name: 'Mindi',
+    tagline: 'Trick taking in teams. Capture the tens; a clean sweep is a Kot.',
+    maxPlayers: 8,
+    startCounts: [4, 6, 8],
+    seatLabel: (position) => `Seat ${position + 1}`,
+    targetLabel: 'Kot to lose',
+    targetHint: 'A team reaching this many Kot loses the match.',
+    targetOptions: [1, 2, 3, 5],
+    defaultTarget: 3,
+    hasTable: false,
   },
 };
 
@@ -62,6 +91,14 @@ export function teamForPosition(position: number): 'TEAM_A' | 'TEAM_B' {
 }
 
 /** Why a match cannot start yet, or null when it can. */
+export function clampTarget(game: GameDescriptor, value: number): number {
+  if (!Number.isFinite(value)) return game.defaultTarget;
+  const rounded = Math.round(value);
+  const lowest = Math.min(...game.targetOptions);
+  const highest = Math.max(...game.targetOptions);
+  return Math.min(highest, Math.max(lowest, rounded));
+}
+
 export function whyCannotStart(game: GameDescriptor, seated: number): string | null {
   if (game.startCounts.includes(seated)) return null;
 

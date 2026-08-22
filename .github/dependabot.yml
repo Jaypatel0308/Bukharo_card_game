@@ -1,5 +1,13 @@
-# Weekly dependency PRs. Grouped so a quiet week is one review rather than
-# eight, and majors stay separate because those are the ones that break a build.
+# Weekly dependency PRs.
+#
+# The first run opened eight at once, because every outdated package happened
+# to be a major version behind and majors were deliberately left ungrouped.
+# Four of them broke the build, which is Dependabot working — but React 19 and
+# Vite 6 are migrations somebody chooses to do, not weekly maintenance.
+#
+# So: everything safe arrives as one PR to glance at, and the frameworks whose
+# majors mean real work are held at their current line until upgraded on
+# purpose. Security advisories are never suppressed by an ignore rule.
 version: 2
 updates:
   - package-ecosystem: npm
@@ -7,10 +15,32 @@ updates:
     schedule:
       interval: weekly
       day: monday
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 3
     groups:
-      minor-and-patch:
+      # One PR for everything routine, whichever workspace it lives in.
+      routine:
+        patterns: ['*']
         update-types: [minor, patch]
+    ignore:
+      # React 19 changes rendering behaviour and the types package with it.
+      - dependency-name: react
+        update-types: [version-update:semver-major]
+      - dependency-name: react-dom
+        update-types: [version-update:semver-major]
+      - dependency-name: '@types/react'
+        update-types: [version-update:semver-major]
+      - dependency-name: '@types/react-dom'
+        update-types: [version-update:semver-major]
+      # The test stack moves as one piece: the coverage provider must match
+      # the runner exactly, so a lone bump of either cannot install.
+      - dependency-name: vitest
+        update-types: [version-update:semver-major]
+      - dependency-name: '@vitest/*'
+        update-types: [version-update:semver-major]
+      - dependency-name: vite
+        update-types: [version-update:semver-major]
+      - dependency-name: '@vitejs/*'
+        update-types: [version-update:semver-major]
     commit-message:
       prefix: deps
 
@@ -18,5 +48,8 @@ updates:
     directory: /
     schedule:
       interval: monthly
+    groups:
+      actions:
+        patterns: ['*']
     commit-message:
       prefix: ci

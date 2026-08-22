@@ -156,6 +156,12 @@ describe('surviving a restart (§61)', () => {
     // restored server against a moment that never existed for anybody.
     await host.waitForState((r) => r.game?.view.turnPhase === 'PLAYING_CARDS');
 
+    // And wait for the draw to be written before taking the baseline at all.
+    // Saves are debounced, so on a slower machine the server can stop while
+    // the drawn card is still only in memory, and the restored room is then
+    // correctly restored — to the turn before this one.
+    await waitForStoredRoom((room) => room.game?.turnPhase === 'PLAYING_CARDS', isBukharo);
+
     const before = {
       roomCode: host.room.roomCode,
       hostHand: host.room.game.view.you.hand.map((c) => c.id),
@@ -172,12 +178,10 @@ describe('surviving a restart (§61)', () => {
 
     // --- restart ---
     await stopServer();
-    const files = (await fs.readdir(path.join(dataDir, 'rooms'))).filter((f) => f.endsWith('.json'));
-    assert.equal(files.length, 1, 'the room should be on disk');
-
     // Check the file itself before trusting what comes back from it: if this
     // fails, the fault is in writing rather than in reading.
-    const stored = JSON.parse(await fs.readFile(path.join(dataDir, 'rooms', files[0]), 'utf8'));
+    const stored = await readStoredRoom(isBukharo);
+    assert.ok(stored, 'the room should be on disk');
     assert.equal(
       stored.game.turnPhase,
       before.turnPhase,
@@ -245,14 +249,14 @@ describe('surviving a restart (§61)', () => {
 });
 
 /**
- * The stored Mindi room, or null if it is not on disk yet.
+ * A stored room matching `match`, or null if it is not on disk yet.
  *
  * Writes are debounced, so a room read straight after a move can still be the
  * room from before it. Tests that stop the server have to wait for the write
  * rather than assume it, or they compare a restored state against a moment
  * that was never saved.
  */
-async function readStoredMindiRoom() {
+async function readStoredRoom(match = () => true) {
   let files;
   try {
     files = (await fs.readdir(path.join(dataDir, 'rooms'))).filter((f) => f.endsWith('.json'));
@@ -262,7 +266,7 @@ async function readStoredMindiRoom() {
   for (const file of files) {
     try {
       const json = JSON.parse(await fs.readFile(path.join(dataDir, 'rooms', file), 'utf8'));
-      if (json.gameId === 'mindi') return json;
+      if (match(json)) return json;
     } catch {
       // An earlier test leaves a deliberately corrupt file here.
     }
@@ -270,18 +274,21 @@ async function readStoredMindiRoom() {
   return null;
 }
 
-async function waitForStoredMindiRoom(check, timeoutMs = 15000) {
+async function waitForStoredRoom(check, match = () => true, timeoutMs = 15000) {
   const deadline = Date.now() + timeoutMs;
   let last = null;
   while (Date.now() < deadline) {
-    last = await readStoredMindiRoom();
+    last = await readStoredRoom(match);
     if (last && check(last)) return last;
     await new Promise((resolve) => setTimeout(resolve, 25));
   }
   throw new Error(
-    `the room never reached disk in the state expected; last saw ${JSON.stringify(last?.game?.currentTrick ?? null)}`,
+    `the room never reached disk in the state expected; last saw ${JSON.stringify(last?.game ?? null).slice(0, 300)}`,
   );
 }
+
+const isMindi = (room) => room.gameId === 'mindi';
+const isBukharo = (room) => room.gameId !== 'mindi';
 
 describe('a Mindi hand surviving a restart (§61)', () => {
   it('brings back the hand, the tally and the face-down card — still face down', async () => {
@@ -326,7 +333,7 @@ describe('a Mindi hand surviving a restart (§61)', () => {
     // The lead has to be on disk before the baseline is taken: a restart can
     // only restore what was saved, and comparing against an unsaved moment is
     // what made this fail on a slower machine.
-    await waitForStoredMindiRoom((room) => room.game?.currentTrick?.plays?.length === 1);
+    await waitForStoredRoom((room) => room.game?.currentTrick?.plays?.length === 1, isMindi);
 
     const chooserName = chooser.room.players.find((p) => p.id === chooserId).displayName;
     const other = clients.find((c) => c.room.youId !== chooserId);
@@ -348,7 +355,7 @@ describe('a Mindi hand surviving a restart (§61)', () => {
 
     // The secret must be on disk — a hidden card that is not saved is a hand
     // that cannot be finished.
-    const stored = await readStoredMindiRoom();
+    const stored = await readStoredRoom(isMindi);
     assert.ok(stored, 'the Mindi room should be on disk');
     assert.equal(stored.game.hiddenCard.id, before.hiddenCard.id);
     assert.equal(stored.game.mode, 'HIDDEN');

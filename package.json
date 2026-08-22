@@ -21,7 +21,9 @@
     "lint": "eslint . --max-warnings=0",
     "lint:fix": "eslint . --fix",
     "test:e2e": "npm run build && playwright test",
-    "test:mindi": "npm run test -w @bukharo/game-mindi"
+    "test:mindi": "npm run test -w @bukharo/game-mindi",
+    "coverage": "npm run coverage -w @bukharo/game-engine && npm run coverage -w @bukharo/game-mindi && npm run coverage -w @bukharo/server && npm run coverage -w @bukharo/web",
+    "smoke": "node scripts/smoke.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",

@@ -144,6 +144,7 @@ export type ServerErrorCode =
   | 'SEAT_TAKEN'
   | 'NOT_READY'
   | 'INVALID_MESSAGE'
+  | 'UNKNOWN_GAME'
   | 'SESSION_INVALID'
   | 'RATE_LIMITED'
   | 'INTERNAL';

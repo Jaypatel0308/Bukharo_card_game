@@ -193,6 +193,15 @@ export default tseslint.config(
     },
   },
 
+  // ---- Operational scripts ----
+  // Not part of the app: they run under Node, against a deployed server.
+  {
+    files: ['scripts/**/*.mjs'],
+    languageOptions: {
+      globals: { ...globals.node },
+    },
+  },
+
   // ---- Tests ----
   {
     files: [

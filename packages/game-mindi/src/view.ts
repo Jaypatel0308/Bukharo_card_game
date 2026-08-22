@@ -1,4 +1,14 @@
-import type { Card, CompletedTrick, LogEntry, MindiState, Suit, TeamId, Trick, TrumpMode } from './types.js';
+import type {
+  Card,
+  CompletedTrick,
+  LogEntry,
+  MindiPlayer,
+  MindiState,
+  Suit,
+  TeamId,
+  Trick,
+  TrumpMode,
+} from './types.js';
 
 /**
  * The redaction boundary.
@@ -66,6 +76,28 @@ export interface MindiView {
 }
 
 const LOG_TAIL = 60;
+/** The table shows the hand just finished; the rest is never read. */
+const HISTORY_TAIL = 12;
+
+/**
+ * Whether this player is sitting on the hidden card with nothing else left.
+ *
+ * Only then does the card count as part of the hand: it comes back unrevealed
+ * and is played as an ordinary card, its suit never becoming trump.
+ */
+function holdsHiddenCard(state: MindiState, player: MindiPlayer): boolean {
+  return player.id === state.chooserId && state.hiddenCard !== null && player.hand.length === 0;
+}
+
+/**
+ * The cards a player still owes to the hand.
+ *
+ * Public on purpose: everyone knows a card is face down and whose it is, so
+ * counting it keeps the table honest about who has yet to play.
+ */
+function handCountOf(state: MindiState, player: MindiPlayer): number {
+  return player.hand.length + (holdsHiddenCard(state, player) ? 1 : 0);
+}
 
 export function viewMindiFor(state: MindiState, viewerId: string | null): MindiView {
   const self = state.players.find((p) => p.id === viewerId);
@@ -82,8 +114,12 @@ export function viewMindiFor(state: MindiState, viewerId: string | null): MindiV
           displayName: self.displayName,
           position: self.position,
           teamId: self.teamId,
-          handCount: self.hand.length,
-          hand: self.hand,
+          handCount: handCountOf(state, self),
+          // The chooser's unrevealed card is theirs to play once nothing else
+          // is left, so it belongs in their hand here. They can already see it
+          // through `yourHiddenCard`; leaving it out only made the last trick
+          // unplayable, with no card to pick and no id to send.
+          hand: holdsHiddenCard(state, self) ? [...self.hand, state.hiddenCard!] : self.hand,
         }
       : null,
     players: state.players.map((player) => ({
@@ -91,7 +127,7 @@ export function viewMindiFor(state: MindiState, viewerId: string | null): MindiV
       displayName: player.displayName,
       position: player.position,
       teamId: player.teamId,
-      handCount: player.hand.length,
+      handCount: handCountOf(state, player),
     })),
     teams: {
       TEAM_A: teamView(state, 'TEAM_A'),
@@ -114,7 +150,7 @@ export function viewMindiFor(state: MindiState, viewerId: string | null): MindiV
     tricksPlayed: state.completedTricks.length,
     lastTrick: state.completedTricks[state.completedTricks.length - 1] ?? null,
 
-    handHistory: state.handHistory,
+    handHistory: state.handHistory.slice(-HISTORY_TAIL),
     losingTeamId: state.losingTeamId,
     log: state.log.slice(-LOG_TAIL),
     stateVersion: state.stateVersion,

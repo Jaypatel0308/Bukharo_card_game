@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { MindiView } from '@bukharo/shared';
+import type { MindiActionPayload, MindiView } from '@bukharo/shared';
 
 import { GameLog } from '../../components/GameLog';
 import { Hand } from '../../components/Hand';
@@ -28,9 +28,12 @@ export function MindiTable({ app, view }: { app: Bukharo; view: MindiView }) {
   const onTurnName =
     view.players.find((p) => p.id === view.currentPlayerId)?.displayName ?? 'someone';
 
+  /** Narrowed to this game, so the compiler catches an action Mindi cannot take. */
+  const send = (action: MindiActionPayload): void => app.act(action);
+
   const play = (): void => {
     if (!selected) return;
-    app.act({ type: 'PLAY_CARD', cardId: selected } as never);
+    send({ type: 'PLAY_CARD', cardId: selected });
     setSelected(null);
   };
 
@@ -119,7 +122,7 @@ export function MindiTable({ app, view }: { app: Bukharo; view: MindiView }) {
             type="button"
             className="button"
             disabled={!mayReveal}
-            onClick={() => app.act({ type: 'REVEAL_TRUMP' } as never)}
+            onClick={() => send({ type: 'REVEAL_TRUMP' })}
           >
             Call for trump
           </button>
@@ -166,14 +169,14 @@ export function MindiTable({ app, view }: { app: Bukharo; view: MindiView }) {
               <button
                 type="button"
                 className="button button--primary"
-                onClick={() => app.act({ type: 'CHOOSE_MODE', mode: 'HIDDEN' } as never)}
+                onClick={() => send({ type: 'CHOOSE_MODE', mode: 'HIDDEN' })}
               >
                 Hide a card
               </button>
               <button
                 type="button"
                 className="button"
-                onClick={() => app.act({ type: 'CHOOSE_MODE', mode: 'KATTE' } as never)}
+                onClick={() => send({ type: 'CHOOSE_MODE', mode: 'KATTE' })}
               >
                 Play Katte
               </button>

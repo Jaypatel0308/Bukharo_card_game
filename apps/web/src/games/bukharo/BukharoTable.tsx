@@ -15,6 +15,8 @@ import { StalledTurn } from '../../components/StalledTurn';
 import { TableCentre } from './TableCentre';
 import { TopBar } from './TopBar';
 import { WildChooser } from './WildChooser';
+import type { BukharoActionPayload } from '@bukharo/shared';
+
 import type { Bukharo } from '../../state/useBukharo';
 import { isMuted, setMuted } from '../../sound';
 
@@ -65,7 +67,8 @@ export function BukharoTable({ app, game }: { app: Bukharo; game: GameView }) {
     setTargetMeldId(null);
   };
 
-  const submit = (payload: Parameters<Bukharo['act']>[0]): void => {
+  /** Narrowed to this game, so the compiler catches an action Bukharo cannot take. */
+  const submit = (payload: BukharoActionPayload): void => {
     app.act(payload);
     clearSelection();
   };

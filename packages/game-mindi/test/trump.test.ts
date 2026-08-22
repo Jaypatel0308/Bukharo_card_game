@@ -401,3 +401,77 @@ describe('edge cases found by probing the built engine', () => {
     assert.match(refused?.message ?? '', /leading/);
   });
 });
+
+describe('the hidden card nobody called for (§20)', () => {
+  /** The chooser holds nothing but the face-down card, and the last trick is on. */
+  function lastTrick() {
+    return scenario(newMatch(4), {
+      status: 'PLAYING',
+      mode: 'HIDDEN',
+      trumpSuit: null,
+      trumpActive: false,
+      chooserId: 'p1',
+      hiddenCard: card('10', 'hearts'),
+      hiddenRevealed: false,
+      currentPlayerId: 'p1',
+      hands: { p1: [], p2: [card('3', 'spades')], p3: [card('4', 'spades')], p4: [card('5', 'spades')] },
+    });
+  }
+
+  it('is in the chooser’s hand to play, not stranded off-view', () => {
+    const view = viewMindiFor(lastTrick(), 'p1');
+
+    // Without this the table shows no cards, nothing can be clicked, and the
+    // hand cannot be finished by anyone.
+    assert.deepEqual(
+      view.you!.hand.map((c) => c.id),
+      [card('10', 'hearts').id],
+    );
+    assert.equal(view.you!.handCount, 1);
+  });
+
+  it('is still counted at the table, so everyone knows a card is owed', () => {
+    const view = viewMindiFor(lastTrick(), 'p2');
+    assert.equal(view.players.find((p) => p.id === 'p1')!.handCount, 1);
+  });
+
+  it('stays secret from everyone but the chooser', () => {
+    const view = viewMindiFor(lastTrick(), 'p2');
+    assert.equal(view.yourHiddenCard, null);
+    assert.equal(view.hiddenCardWaiting, true);
+    assert.equal(view.you!.hand.length, 1);
+    assert.equal(view.you!.hand[0]!.id, card('3', 'spades').id);
+  });
+
+  it('plays as an ordinary card, and its suit never becomes trump', () => {
+    const played = applyOrThrow(lastTrick(), {
+      type: 'PLAY_CARD',
+      playerId: 'p1',
+      cardId: card('10', 'hearts').id,
+    });
+
+    assert.equal(played.trumpSuit, null, 'an unrevealed card sets no trump');
+    assert.equal(played.trumpActive, false);
+    assert.equal(played.hiddenCard, null, 'it left the hidden slot');
+    assert.equal(played.currentTrick.plays[0]!.card.id, card('10', 'hearts').id);
+  });
+
+  it('finishes the hand — every card is accounted for', () => {
+    let state = applyOrThrow(lastTrick(), {
+      type: 'PLAY_CARD',
+      playerId: 'p1',
+      cardId: card('10', 'hearts').id,
+    });
+    state = playTrick(state, [
+      ['p2', card('3', 'spades')],
+      ['p3', card('4', 'spades')],
+      ['p4', card('5', 'spades')],
+    ]);
+
+    assert.equal(state.status !== 'PLAYING', true, 'the hand ended');
+    assert.equal(state.hiddenCard, null);
+    // The hearts 10 is a Mindi and it was led, so it counts for someone.
+    const result = state.handHistory.at(-1)!;
+    assert.equal(result.mindis.TEAM_A + result.mindis.TEAM_B >= 1, true);
+  });
+});

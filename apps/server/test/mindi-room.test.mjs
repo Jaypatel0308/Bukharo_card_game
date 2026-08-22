@@ -25,7 +25,14 @@ let wsUrl;
 before(async () => {
   dataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bukharo-mindi-'));
   child = spawn(process.execPath, [serverEntry], {
-    env: { ...process.env, PORT: '0', DATA_DIR: dataDir, SWEEP_INTERVAL_MS: '600000' },
+    // A short grace period so the skip path is reachable without waiting.
+    env: {
+      ...process.env,
+      PORT: '0',
+      DATA_DIR: dataDir,
+      SWEEP_INTERVAL_MS: '600000',
+      DISCONNECT_GRACE_MS: '150',
+    },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   child.stderr.on('data', (d) => process.stderr.write(`[server] ${d}`));
@@ -239,6 +246,42 @@ describe('a Mindi room', () => {
         }
       }
     }
+    for (const client of all) client.close();
+  });
+
+  it('lets the host play for a player who has gone', async () => {
+    const { host, all } = await seat(4);
+    await start(all, host);
+
+    const chooserId = host.room.game.view.chooserId;
+    const chooser = all.find((c) => c.room.youId === chooserId);
+    chooser.send({ type: 'game:action', actionId: 'm', action: { type: 'CHOOSE_MODE', mode: 'KATTE' } });
+    for (const client of all) await client.waitForState((r) => r.game?.view.status === 'PLAYING');
+
+    const absentId = host.room.game.view.currentPlayerId;
+    const absent = all.find((c) => c.room.youId === absentId);
+    const present = all.filter((c) => c !== absent);
+    absent.close();
+    await present[0].waitForState((r) => r.waitingForPlayerId === absentId);
+    await new Promise((resolve) => setTimeout(resolve, 250));
+
+    const holder = present.find((c) => c.room.players.find((p) => p.id === c.room.youId)?.isHost);
+    holder.send({ type: 'host:skipTurn' });
+
+    // A trick needs a card from everyone, so skipping plays one for them.
+    const after = await holder
+      .waitFor(
+        (m) =>
+          m.type === 'room:state' &&
+          Boolean(m.room.game) &&
+          m.room.game.view.currentPlayerId !== absentId,
+      )
+      .then((m) => m.room);
+
+    assert.notEqual(after.game.view.currentPlayerId, absentId);
+    assert.equal(after.game.view.currentTrick.plays.length, 1);
+    assert.equal(after.waitingForPlayerId, null);
+
     for (const client of all) client.close();
   });
 

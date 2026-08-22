@@ -326,7 +326,12 @@ function revealTrump(state: MindiState, playerId: string, rules: MindiRules): Mi
 
   const player = playerById(state, playerId)!;
   const leadSuit = state.currentTrick.leadSuit;
-  if (leadSuit && player.hand.some((card) => card.suit === leadSuit)) {
+  // §17 — the chance comes to a player who cannot follow the suit that was
+  // led. Nobody has led to the player on lead, so the question cannot arise.
+  if (leadSuit === null) {
+    return fail('CAN_STILL_FOLLOW_SUIT', 'You are leading, so there is no suit you have failed to follow.');
+  }
+  if (player.hand.some((card) => card.suit === leadSuit)) {
     return fail('CAN_STILL_FOLLOW_SUIT', 'You can still follow suit, so the trump stays hidden.');
   }
 
@@ -560,6 +565,68 @@ function pickFrom(state: MindiState, teamId: TeamId): string {
   const members = byPosition(state).filter((p) => p.teamId === teamId);
   const index = state.handNumber % members.length;
   return members[index]!.id;
+}
+
+/**
+ * Moves the table past a player who has gone.
+ *
+ * Unlike a game where a turn can simply be passed, a trick needs a card from
+ * everybody before it can be resolved — so getting past an absent player means
+ * playing one for them. The lowest legal card is chosen: deterministic, and
+ * the least damaging thing to do with a hand that is not yours to judge.
+ *
+ * When the table is instead waiting on someone to say how trump is set, Katte
+ * is chosen, because it is the option that puts no card face down and so
+ * creates no private knowledge for a player who is not there to hold it.
+ */
+export function forceSkipTurn(state: MindiState, reason: string, rules: MindiRules): MindiState {
+  if (state.status === 'CHOOSING_MODE') {
+    const result = applyMindiAction(
+      state,
+      { type: 'CHOOSE_MODE', playerId: state.chooserId, mode: 'KATTE' },
+      rules,
+      { nextInt: () => 0 },
+    );
+    if (!result.ok) return state;
+    const draft = draftOf(result.state);
+    const chooser = playerById(draft, draft.chooserId)!;
+    log(
+      draft,
+      chooser.id,
+      'MODE_FORCED',
+      `${chooser.displayName} is ${reason}, so the hand is played as Katte.`,
+    );
+    return draft;
+  }
+
+  if (state.status !== 'PLAYING') return state;
+  const player = playerById(state, state.currentPlayerId);
+  if (!player) return state;
+
+  const lead = state.currentTrick.leadSuit;
+  const following = lead ? player.hand.filter((card) => card.suit === lead) : [];
+  const choices = following.length > 0 ? following : player.hand;
+  const lowest = [...choices].sort((a, b) => rankValue(a.rank) - rankValue(b.rank))[0];
+
+  const cardId = lowest?.id ?? state.hiddenCard?.id;
+  if (!cardId) return state;
+
+  const result = applyMindiAction(
+    state,
+    { type: 'PLAY_CARD', playerId: player.id, cardId },
+    rules,
+    { nextInt: () => 0 },
+  );
+  if (!result.ok) return state;
+
+  const draft = draftOf(result.state);
+  log(
+    draft,
+    player.id,
+    'TURN_FORCED',
+    `${player.displayName} is ${reason}, so their lowest legal card was played for them.`,
+  );
+  return draft;
 }
 
 export function startNextHand(state: MindiState, rules: MindiRules, rng: Rng): MindiState {

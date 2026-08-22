@@ -25,7 +25,7 @@ one of them lands them a Kot.
 ```bash
 npm install
 npm run build
-npm test          # 290 tests: two engines, server and web client
+npm test          # 297 tests: two engines, server and web client
 npm start         # http://localhost:8787
 ```
 
@@ -173,8 +173,8 @@ behaviour.
 ```bash
 npm run lint          # ESLint: bugs, not style
 npm run test:engine   # 75 Bukharo rule tests, no I/O
-npm run test:mindi    # 55 Mindi rule tests, no I/O
-npm run test:server   # 56 tests against a real server process
+npm run test:mindi    # 61 Mindi rule tests, no I/O
+npm run test:server   # 57 tests against a real server process
 npm run test:web      # 104 client tests (Vitest, jsdom)
 npm run test:e2e      # 39 browser tests (Playwright: desktop and phone)
 ```
@@ -273,8 +273,10 @@ the scenario that broke it:
   so every field is checked at the boundary in `validate.ts`. A seat that is
   not one of the four is refused rather than stored.
 - **A turn nobody is playing can be moved past.** After the grace period the
-  host may skip a disconnected player, or end the match outright. Nothing is
-  drawn or discarded on their behalf.
+  host may skip a disconnected player, or end the match outright. What skipping
+  means is the game's business: Bukharo passes the turn without touching their
+  cards, while Mindi cannot — a trick needs a card from everyone — so it plays
+  their lowest legal card and says so in the log.
 - **A socket occupies exactly one room.** Joining another releases the first,
   so no room is held open by a player who is not there.
 

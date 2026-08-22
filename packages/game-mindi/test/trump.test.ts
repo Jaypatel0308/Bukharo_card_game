@@ -383,3 +383,21 @@ describe('choosing how trump is set (§86 step 4)', () => {
     }
   });
 });
+
+describe('edge cases found by probing the built engine', () => {
+  it('refuses the reveal to the player on lead (§17)', () => {
+    // Nobody has led to the leader, so there is no suit they failed to follow.
+    const state = scenario(newMatch(4), {
+      status: 'PLAYING',
+      mode: 'HIDDEN',
+      hiddenCard: card('9', 'spades'),
+      hiddenRevealed: false,
+      chooserId: 'p1',
+      currentPlayerId: 'p2',
+      hands: { p2: [card('5', 'hearts')] },
+    });
+    const refused = refuse(state, { type: 'REVEAL_TRUMP', playerId: 'p2' });
+    assert.equal(refused?.code, 'CAN_STILL_FOLLOW_SUIT');
+    assert.match(refused?.message ?? '', /leading/);
+  });
+});

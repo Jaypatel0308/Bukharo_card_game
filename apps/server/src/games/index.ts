@@ -17,7 +17,13 @@ const MODULES: Record<GameId, GameModule> = {
 };
 
 export function moduleFor(gameId: GameId): GameModule {
-  return MODULES[gameId];
+  const module = MODULES[gameId];
+  if (!module) throw new Error(`No module is registered for the game "${gameId}"`);
+  return module;
+}
+
+export function isPlayableGame(gameId: string): gameId is GameId {
+  return Object.hasOwn(MODULES, gameId);
 }
 
 export * from './module.js';

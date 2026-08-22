@@ -17,7 +17,7 @@ import {
 } from '@bukharo/shared';
 
 import { config } from './config.js';
-import { moduleFor, type GameEvent } from './games/index.js';
+import { isPlayableGame, moduleFor, type GameEvent } from './games/index.js';
 import {
   FileStore,
   ROOM_SCHEMA_VERSION,
@@ -77,6 +77,12 @@ export class RoomManager {
   private async restore(): Promise<void> {
     const rooms = await this.store.loadAll();
     for (const room of rooms) {
+      // A room for a game this build no longer offers cannot be resumed, and
+      // leaving it in memory would crash the first request that touched it.
+      if (!isPlayableGame(room.gameId)) {
+        await this.store.delete(room.id);
+        continue;
+      }
       // Nobody is connected to a freshly started process, and nobody is being
       // waited on: that countdown belonged to the process that died.
       for (const player of room.players) player.connected = false;

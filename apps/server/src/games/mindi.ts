@@ -5,6 +5,7 @@ import {
   applyMindiAction,
   createMindiMatch,
   cryptoRng,
+  forceSkipTurn,
   setTeamName,
   startNextHand,
   viewMindiFor,
@@ -89,10 +90,10 @@ export const mindiModule: GameModule = {
     return asState(state).currentPlayerId;
   },
 
-  skipCurrentPlayer(state) {
-    // Mindi has no way to pass a turn: every player must put a card down for
-    // the trick to complete. The room falls back on ending the match.
-    return state;
+  skipCurrentPlayer(state, reason) {
+    // A trick cannot resolve without a card from everyone, so getting past an
+    // absent player means playing one for them. See forceSkipTurn.
+    return forceSkipTurn(asState(state), reason, DEFAULT_MINDI_RULES);
   },
 
   renameTeam(state, teamId, name) {

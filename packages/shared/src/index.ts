@@ -54,6 +54,9 @@ export interface RoomView {
   status: RoomStatus;
   hostId: string | null;
   /** Host-editable display names for the two teams. */
+  /** Whether this game is played in teams at all. */
+  hasTeams: boolean;
+  /** Only meaningful when `hasTeams`; left at its defaults otherwise. */
   teamNames: Record<TeamId, string>;
   players: RoomPlayerView[];
   /** Null while the room is still in the lobby. */

@@ -302,6 +302,9 @@ export class RoomManager {
   ): Promise<OpResult<Room>> {
     return this.mutate(roomId, hostId, (room, host) => {
       if (!host.isHost) return fail('NOT_HOST', 'Only the host can rename the teams.');
+      if (!describeGame(room.gameId).hasTeams) {
+        return fail('WRONG_PHASE', 'This game is not played in teams.');
+      }
       const clean = cleanName(name) || (teamId === 'TEAM_A' ? 'Team A' : 'Team B');
       room.teamNames[teamId] = clean;
       // A match in progress carries its own copy, used by the game log.
@@ -718,6 +721,7 @@ export function roomView(room: Room, viewerId: string | null): RoomView {
     gameId: room.gameId,
     status: room.status,
     hostId: room.players.find((p) => p.isHost)?.id ?? null,
+    hasTeams: describeGame(room.gameId).hasTeams,
     teamNames: { ...room.teamNames },
     players: room.players.map((player) => ({
       id: player.id,
@@ -727,7 +731,10 @@ export function roomView(room: Room, viewerId: string | null): RoomView {
         player.position === null
           ? null
           : describeGame(room.gameId).seatLabel(player.position, room.players.length),
-      teamId: player.position === null ? null : teamForPosition(player.position),
+      teamId:
+        player.position === null || !describeGame(room.gameId).hasTeams
+          ? null
+          : teamForPosition(player.position),
       connected: player.connected,
       ready: player.ready,
       isHost: player.isHost,

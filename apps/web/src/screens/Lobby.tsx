@@ -58,12 +58,13 @@ export function Lobby({ app }: { app: Bukharo }) {
           {seats.map((position) => {
             const occupant = room.players.find((p) => p.position === position);
             const isYou = occupant?.id === room.youId;
-            const team = teamForPosition(position);
+            // A game without teams has no partnerships to colour a seat by.
+            const team = room.hasTeams ? teamForPosition(position) : null;
             return (
-              <div key={position} className={`seat seat--${team.toLowerCase()}`}>
+              <div key={position} className={`seat ${team ? `seat--${team.toLowerCase()}` : ''}`}>
                 <div className="seat__meta">
                   <span className="seat__position">{game.seatLabel(position, game.maxPlayers)}</span>
-                  <span className="seat__team">{room.teamNames[team]}</span>
+                  {team && <span className="seat__team">{room.teamNames[team]}</span>}
                 </div>
                 {occupant ? (
                   <div className="seat__player">
@@ -104,6 +105,7 @@ export function Lobby({ app }: { app: Bukharo }) {
         <p className="hint">Partners sit opposite each other. Tap an empty seat to move.</p>
       </div>
 
+      {room.hasTeams && (
       <div className="panel">
         <h2 className="panel__title">Teams</h2>
         <div className="teamNames">
@@ -127,6 +129,7 @@ export function Lobby({ app }: { app: Bukharo }) {
         </div>
         {isHost && <p className="hint">Only you can rename the teams.</p>}
       </div>
+      )}
 
       {isHost && (
         <div className="panel">

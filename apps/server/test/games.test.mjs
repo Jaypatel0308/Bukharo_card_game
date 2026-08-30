@@ -112,3 +112,29 @@ describe('why a match cannot start', () => {
     assert.match(whyCannotStart(bukharo, 5), /seats at most 4/);
   });
 });
+
+describe('teams belong to the game, not the platform', () => {
+  it('still seats Bukharo and Mindi in two teams', () => {
+    for (const id of ['bukharo', 'mindi']) {
+      assert.equal(GAMES[id].hasTeams, true, `${id} is a partnership game`);
+    }
+  });
+
+  it('alternates seats, so the players either side of you are opponents', () => {
+    assert.equal(teamForPosition(0), 'TEAM_A');
+    assert.equal(teamForPosition(1), 'TEAM_B');
+    assert.equal(teamForPosition(2), 'TEAM_A');
+    assert.equal(teamForPosition(3), 'TEAM_B');
+  });
+
+  it('describes every game as either having teams or not', () => {
+    // A new game must answer this rather than inheriting an assumption.
+    for (const id of GAME_IDS) {
+      assert.equal(
+        typeof GAMES[id].hasTeams,
+        'boolean',
+        `${id} does not say whether it is played in teams`,
+      );
+    }
+  });
+});

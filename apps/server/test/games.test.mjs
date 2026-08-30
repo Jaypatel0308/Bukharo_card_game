@@ -35,9 +35,12 @@ describe('the game catalogue', () => {
       assert.deepEqual(game.startCounts, ascending);
       // Nobody may join beyond a size the game can actually start with.
       assert.equal(Math.max(...game.startCounts), game.maxPlayers);
-      // Two alternating teams need an even number of players.
-      for (const count of game.startCounts) {
-        assert.equal(count % 2, 0, `${game.id} cannot seat ${count} in two teams`);
+      // Two alternating teams need an even number of players. A game scored
+      // per player has no such constraint, and Judgement is happy at three.
+      if (game.hasTeams) {
+        for (const count of game.startCounts) {
+          assert.equal(count % 2, 0, `${game.id} cannot seat ${count} in two teams`);
+        }
       }
     }
   });
@@ -66,8 +69,9 @@ describe('teams alternate around the table', () => {
     assert.equal(teamForPosition(7), 'TEAM_B');
   });
 
-  it('splits every legal table evenly', () => {
+  it('splits every legal table evenly, where there are teams to split', () => {
     for (const game of Object.values(GAMES)) {
+      if (!game.hasTeams) continue;
       for (const count of game.startCounts) {
         const teams = Array.from({ length: count }, (_, i) => teamForPosition(i));
         const a = teams.filter((t) => t === 'TEAM_A').length;

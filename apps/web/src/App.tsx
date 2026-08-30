@@ -1,3 +1,4 @@
+import { JudgementTable } from './games/judgement/JudgementTable';
 import { MindiTable } from './games/mindi/MindiTable';
 import { Home } from './screens/Home';
 import { Lobby } from './screens/Lobby';
@@ -14,7 +15,8 @@ export function App() {
 
     // One table per game, chosen by the tag the server put on the snapshot.
     if (room.game.gameId === 'bukharo') return <BukharoTable app={app} game={room.game.view} />;
-    return <MindiTable app={app} view={room.game.view} />;
+    if (room.game.gameId === 'mindi') return <MindiTable app={app} view={room.game.view} />;
+    return <JudgementTable app={app} view={room.game.view} />;
   };
 
   return (

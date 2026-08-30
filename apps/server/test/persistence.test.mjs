@@ -450,3 +450,103 @@ describe('Mindi replays a repeated action only once', () => {
     for (const client of clients) client.close();
   });
 });
+
+describe('a Judgement match surviving a restart (§61)', () => {
+  it('brings back the hands, the judgements and the running scores', async () => {
+    const names = ['Ada', 'Bo', 'Cy'];
+    const host = await new Client(names[0]).connect();
+    host.send({
+      type: 'room:create',
+      actionId: 'jc',
+      displayName: names[0],
+      gameId: 'judgement',
+      target: 5,
+    });
+    await host.waitFor((m) => m.type === 'session');
+    const code = host.session.roomCode;
+    const tokens = { [names[0]]: host.session.sessionToken };
+
+    const clients = [host];
+    for (const name of names.slice(1)) {
+      const client = await new Client(name).connect();
+      client.send({ type: 'room:join', actionId: `jj-${name}`, displayName: name, roomCode: code });
+      await client.waitFor((m) => m.type === 'session');
+      tokens[name] = client.session.sessionToken;
+      clients.push(client);
+    }
+
+    for (const client of clients) client.send({ type: 'player:ready', ready: true });
+    await host.waitForState((r) => r.players.every((p) => p.ready));
+    host.send({ type: 'game:start', actionId: 'js' });
+    for (const client of clients) await client.waitForState((r) => r.game != null);
+
+    // Judge for two of the three, so the saved state is mid-bidding.
+    for (let i = 0; i < 2; i++) {
+      const view = host.room.game.view;
+      const bidder = clients.find((c) => c.room.youId === view.currentPlayerId);
+      const bid = bidder.room.game.view.yourLegalBids[0];
+      bidder.send({ type: 'game:action', actionId: `jb${i}`, action: { type: 'PLACE_BID', bid } });
+      const judged = i + 1;
+      for (const client of clients) {
+        await client.waitForState(
+          (r) => r.game != null && r.game.view.players.filter((p) => p.bid !== null).length === judged,
+        );
+      }
+    }
+
+    // The bids must be on disk before the baseline is taken; saves are
+    // debounced, and comparing against an unsaved moment is what made the
+    // other restart tests fail on a slower machine.
+    const isJudgement = (room) => room.gameId === 'judgement';
+    await waitForStoredRoom(
+      (room) => room.game?.players?.filter((p) => p.bid !== null).length === 2,
+      isJudgement,
+    );
+
+    const before = {
+      hands: Object.fromEntries(
+        clients.map((c) => [c.name, c.room.game.view.you.hand.map((card) => card.id)]),
+      ),
+      bids: host.room.game.view.players.map((p) => p.bid),
+      currentPlayerId: host.room.game.view.currentPlayerId,
+      trump: host.room.game.view.trump,
+      roundNumber: host.room.game.view.roundNumber,
+      totalRounds: host.room.game.view.totalRounds,
+    };
+    assert.equal(before.totalRounds, 5, 'the typed round count should be kept');
+
+    for (const client of clients) client.close();
+    await stopServer();
+    await startServer();
+
+    // Everyone gets their own hand back, and nobody else's.
+    for (const name of names) {
+      const returning = await new Client(`${name} again`).connect();
+      returning.send({ type: 'session:resume', sessionToken: tokens[name] });
+      const room = await returning.waitForState((r) => r.game != null);
+
+      assert.equal(room.game.gameId, 'judgement');
+      assert.equal(room.hasTeams, false, 'Judgement is still team-less after a restart');
+      assert.deepEqual(
+        room.game.view.you.hand.map((card) => card.id),
+        before.hands[name],
+        `${name} came back with a different hand`,
+      );
+      assert.deepEqual(room.game.view.players.map((p) => p.bid), before.bids);
+      assert.equal(room.game.view.currentPlayerId, before.currentPlayerId);
+      assert.equal(room.game.view.trump, before.trump);
+      assert.equal(room.game.view.roundNumber, before.roundNumber);
+      assert.equal(room.game.view.totalRounds, before.totalRounds);
+
+      // Nobody else's cards came along.
+      const seats = JSON.stringify(room.game.view.players);
+      for (const [other, hand] of Object.entries(before.hands)) {
+        if (other === name) continue;
+        for (const cardId of hand) {
+          assert.equal(seats.includes(`"${cardId}"`), false, `${name} could see ${other}'s cards`);
+        }
+      }
+      returning.close();
+    }
+  });
+});

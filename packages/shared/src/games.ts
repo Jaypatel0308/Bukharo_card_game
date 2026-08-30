@@ -10,7 +10,7 @@
  * the room, session, presence or persistence code changes.
  */
 
-export type GameId = 'bukharo' | 'mindi';
+export type GameId = 'bukharo' | 'mindi' | 'judgement';
 
 export interface GameDescriptor {
   id: GameId;
@@ -33,8 +33,20 @@ export interface GameDescriptor {
    */
   targetLabel: string;
   targetHint: string;
+  /** Shortcut buttons. Never the whole range when `targetFreeEntry` is set. */
   targetOptions: number[];
   defaultTarget: number;
+  /** Lowest and highest a host may set, whatever the shortcuts offer. */
+  targetMin: number;
+  targetMax: number;
+  /**
+   * Whether the host types the number rather than picking one.
+   *
+   * Judgement is played to an agreed number of rounds — any number the table
+   * likes (§6) — so offering five fixed choices would be the interface
+   * inventing a rule the game does not have.
+   */
+  targetFreeEntry: boolean;
   /**
    * How many players, in words, for the picker — the start counts read as
    * numbers and "4 / 6 / 8" needs saying rather than showing.
@@ -73,6 +85,9 @@ export const GAMES: Record<GameId, GameDescriptor> = {
     targetHint: 'The first team past this score wins the match.',
     targetOptions: [1000, 1500, 2000, 3000],
     defaultTarget: 2000,
+    targetMin: 1000,
+    targetMax: 3000,
+    targetFreeEntry: false,
     playerSummary: '4 players, 2 teams',
     hasTeams: true,
     rules: [
@@ -97,6 +112,9 @@ export const GAMES: Record<GameId, GameDescriptor> = {
     targetHint: 'A team reaching this many Kot loses the match.',
     targetOptions: [1, 2, 3, 5],
     defaultTarget: 3,
+    targetMin: 1,
+    targetMax: 5,
+    targetFreeEntry: false,
     playerSummary: '4, 6 or 8 players, 2 teams',
     hasTeams: true,
     rules: [
@@ -108,6 +126,37 @@ export const GAMES: Record<GameId, GameDescriptor> = {
       'Under Katte the first card played off suit sets the trump instead.',
       'Most Mindis wins the hand; level on Mindis, it goes on tricks.',
       'Take every Mindi and it is a Kot. Reach the Kot limit and your team loses the match.',
+    ],
+    hasTable: true,
+  },
+  judgement: {
+    id: 'judgement',
+    name: 'Judgement',
+    tagline: 'Predict exactly how many tricks you will take. Close is worth nothing.',
+    maxPlayers: 10,
+    // §2 — anywhere from two to ten, and every count in between works.
+    startCounts: [2, 3, 4, 5, 6, 7, 8, 9, 10],
+    seatLabel: (position) => `Seat ${position + 1}`,
+    targetLabel: 'Rounds',
+    targetHint: 'Agreed before the first deal; the game ends the moment it is reached.',
+    // §6 — any number the players like. These are the offered shortcuts.
+    targetOptions: [5, 10, 13, 20, 30],
+    defaultTarget: 13,
+    targetMin: 1,
+    targetMax: 60,
+    targetFreeEntry: true,
+    playerSummary: '2 to 10 players, every player for themselves',
+    hasTeams: false,
+    rules: [
+      'One deck, no jokers. Ace is high.',
+      'Round one deals a single card each; the count climbs to the maximum, then back down to one.',
+      'Trump rotates on a fixed cycle: spades, diamonds, clubs, hearts, hearts, clubs, diamonds, spades.',
+      'Before play, judge exactly how many tricks you will take.',
+      'The last bidder may not make the bids add up to the tricks available, so somebody must be wrong.',
+      'Follow the suit led if you can. If you cannot, play anything — trumping is never compulsory.',
+      'Highest trump takes the trick, or the highest card of the suit led.',
+      'Exact judgement only: nothing scores 10, one scores 11, and anything more scores ten times the bid.',
+      'Miss by one either way and the round is worth nothing.',
     ],
     hasTable: true,
   },
@@ -143,9 +192,9 @@ export function teamForPosition(position: number): 'TEAM_A' | 'TEAM_B' {
 export function clampTarget(game: GameDescriptor, value: number): number {
   if (!Number.isFinite(value)) return game.defaultTarget;
   const rounded = Math.round(value);
-  const lowest = Math.min(...game.targetOptions);
-  const highest = Math.max(...game.targetOptions);
-  return Math.min(highest, Math.max(lowest, rounded));
+  // The bounds, not the shortcut buttons: a game the host types a number for
+  // would otherwise have that number snapped to the nearest offered choice.
+  return Math.min(game.targetMax, Math.max(game.targetMin, rounded));
 }
 
 export function whyCannotStart(game: GameDescriptor, seated: number): string | null {

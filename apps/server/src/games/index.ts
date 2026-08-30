@@ -1,6 +1,7 @@
 import type { GameId } from '@bukharo/shared';
 
 import { bukharoModule } from './bukharo.js';
+import { judgementModule } from './judgement.js';
 import { mindiModule } from './mindi.js';
 import type { GameModule } from './module.js';
 
@@ -14,6 +15,7 @@ import type { GameModule } from './module.js';
 const MODULES: Record<GameId, GameModule> = {
   bukharo: bukharoModule,
   mindi: mindiModule,
+  judgement: judgementModule,
 };
 
 export function moduleFor(gameId: GameId): GameModule {

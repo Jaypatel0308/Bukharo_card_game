@@ -71,9 +71,16 @@ export default tseslint.config(
         {
           patterns: [
             {
-              group: ['@bukharo/game-engine', '@bukharo/game-engine/*', '**/game-engine/*'],
+              group: [
+                '@bukharo/game-engine',
+                '@bukharo/game-engine/*',
+                '**/game-engine/*',
+                '@bukharo/game-judgement',
+                '@bukharo/game-judgement/*',
+                '**/game-judgement/*',
+              ],
               message:
-                'Mindi must not reach into Bukharo. The two games share nothing but the room they are played in.',
+                'Mindi must not reach into another game. They share nothing but the room they are played in.',
             },
           ],
         },
@@ -88,9 +95,40 @@ export default tseslint.config(
         {
           patterns: [
             {
-              group: ['@bukharo/game-mindi', '@bukharo/game-mindi/*', '**/game-mindi/*'],
+              group: [
+                '@bukharo/game-mindi',
+                '@bukharo/game-mindi/*',
+                '**/game-mindi/*',
+                '@bukharo/game-judgement',
+                '@bukharo/game-judgement/*',
+                '**/game-judgement/*',
+              ],
               message:
-                'Bukharo must not reach into Mindi. The two games share nothing but the room they are played in.',
+                'Bukharo must not reach into another game. They share nothing but the room they are played in.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['packages/game-judgement/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: [
+                '@bukharo/game-engine',
+                '@bukharo/game-engine/*',
+                '**/game-engine/*',
+                '@bukharo/game-mindi',
+                '@bukharo/game-mindi/*',
+                '**/game-mindi/*',
+              ],
+              message:
+                'Judgement must not reach into another game. They share nothing but the room they are played in.',
             },
           ],
         },
@@ -148,8 +186,8 @@ export default tseslint.config(
         {
           patterns: [
             {
-              group: ['**/bukharo/*', '../bukharo/*'],
-              message: 'Mindi must not borrow from Bukharo’s table.',
+              group: ['**/bukharo/*', '../bukharo/*', '**/judgement/*', '../judgement/*'],
+              message: 'Mindi must not borrow from another game’s table.',
             },
           ],
         },
@@ -164,8 +202,24 @@ export default tseslint.config(
         {
           patterns: [
             {
-              group: ['**/mindi/*', '../mindi/*'],
-              message: 'Bukharo must not borrow from Mindi’s table.',
+              group: ['**/mindi/*', '../mindi/*', '**/judgement/*', '../judgement/*'],
+              message: 'Bukharo must not borrow from another game’s table.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['apps/web/src/games/judgement/**/*.{ts,tsx}'],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/bukharo/*', '../bukharo/*', '**/mindi/*', '../mindi/*'],
+              message: 'Judgement must not borrow from another game’s table.',
             },
           ],
         },

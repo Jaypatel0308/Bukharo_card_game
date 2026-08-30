@@ -10,3 +10,4 @@
 /* One per game, so a table's styling lives with its table. */
 @import './games/bukharo.css';
 @import './games/mindi.css';
+@import './games/judgement.css';

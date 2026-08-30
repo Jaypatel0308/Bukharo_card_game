@@ -161,7 +161,34 @@ export function Home({ app }: { app: Bukharo }) {
                 </button>
               ))}
             </div>
-            <p className="hint">{game.targetHint}</p>
+            {/* Judgement is played to any number the table agrees, so the
+                shortcuts are shortcuts and the box is the real answer. */}
+            {game.targetFreeEntry && (
+              <label className="field field--inline">
+                <span className="field__label">Or type a number</span>
+                <input
+                  className="field__input field__input--number"
+                  type="number"
+                  inputMode="numeric"
+                  min={game.targetMin}
+                  max={game.targetMax}
+                  value={target}
+                  onChange={(event) => {
+                    const value = Number(event.target.value);
+                    setTarget(Number.isFinite(value) ? value : game.defaultTarget);
+                  }}
+                  onBlur={() =>
+                    setTarget((current) =>
+                      Math.min(game.targetMax, Math.max(game.targetMin, Math.round(current) || game.defaultTarget)),
+                    )
+                  }
+                />
+              </label>
+            )}
+            <p className="hint">
+              {game.targetHint}
+              {game.targetFreeEntry && ` Anything from ${game.targetMin} to ${game.targetMax}.`}
+            </p>
           </fieldset>
 
           <button className="button button--primary button--block" type="submit" disabled={!canCreate}>

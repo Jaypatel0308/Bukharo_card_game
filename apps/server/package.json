@@ -14,6 +14,8 @@
   },
   "dependencies": {
     "@bukharo/game-engine": "*",
+    "@bukharo/game-judgement": "*",
+    "@bukharo/game-mindi": "*",
     "@bukharo/shared": "*",
     "ws": "^8.18.0"
   },

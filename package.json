@@ -8,8 +8,8 @@
     "apps/*"
   ],
   "scripts": {
-    "build": "npm run build -w @bukharo/game-engine && npm run build -w @bukharo/game-mindi && npm run build -w @bukharo/shared && npm run build -w @bukharo/server && npm run build -w @bukharo/web",
-    "test": "npm run test -w @bukharo/game-engine && npm run test -w @bukharo/game-mindi && npm run test -w @bukharo/server && npm run test -w @bukharo/web",
+    "build": "npm run build -w @bukharo/game-engine && npm run build -w @bukharo/game-mindi && npm run build -w @bukharo/game-judgement && npm run build -w @bukharo/shared && npm run build -w @bukharo/server && npm run build -w @bukharo/web",
+    "test": "npm run test -w @bukharo/game-engine && npm run test -w @bukharo/game-mindi && npm run test -w @bukharo/game-judgement && npm run test -w @bukharo/server && npm run test -w @bukharo/web",
     "dev": "npm run dev -w @bukharo/server & npm run dev -w @bukharo/web",
     "dev:server": "npm run dev -w @bukharo/server",
     "dev:web": "npm run dev -w @bukharo/web",
@@ -22,8 +22,9 @@
     "lint:fix": "eslint . --fix",
     "test:e2e": "npm run build && playwright test",
     "test:mindi": "npm run test -w @bukharo/game-mindi",
-    "coverage": "npm run coverage -w @bukharo/game-engine && npm run coverage -w @bukharo/game-mindi && npm run coverage -w @bukharo/server && npm run coverage -w @bukharo/web",
-    "smoke": "node scripts/smoke.mjs"
+    "coverage": "npm run coverage -w @bukharo/game-engine && npm run coverage -w @bukharo/game-mindi && npm run coverage -w @bukharo/game-judgement && npm run coverage -w @bukharo/server && npm run coverage -w @bukharo/web",
+    "smoke": "node scripts/smoke.mjs",
+    "test:judgement": "npm run test -w @bukharo/game-judgement"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",

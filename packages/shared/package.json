@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@bukharo/game-engine": "*",
+    "@bukharo/game-judgement": "*",
     "@bukharo/game-mindi": "*"
   },
   "devDependencies": {

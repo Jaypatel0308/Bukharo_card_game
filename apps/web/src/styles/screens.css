@@ -273,3 +273,17 @@
 .backLink:hover {
   color: var(--ink);
 }
+
+/* A typed target sits under its shortcut buttons. */
+.field--inline {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 0.5rem;
+}
+
+.field__input--number {
+  width: 6rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}

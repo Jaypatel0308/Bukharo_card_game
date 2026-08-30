@@ -1,0 +1,138 @@
+/* Judgement: every player for themselves, so nothing here is team-coloured. */
+
+.jchip {
+  padding: 0.1rem 0.4rem;
+  border: 1px solid var(--line);
+  border-radius: 0.4rem;
+  font-size: 0.75rem;
+  color: var(--ink-dim);
+  white-space: nowrap;
+}
+
+.jseats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  justify-content: center;
+  padding: 0.4rem;
+  margin: 0;
+  list-style: none;
+}
+
+.jseat {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 0.5rem;
+  align-items: center;
+  min-width: 8.5rem;
+  padding: 0.35rem 0.55rem;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  font-size: 0.8rem;
+}
+
+/* Where a player stands against their own judgement — the only thing that
+   matters, and what a bare trick count does not tell you. */
+.jseat--needs-more { border-left-color: var(--accent); }
+.jseat--exact { border-left-color: #3fb950; }
+.jseat--overshot { border-left-color: #f85149; }
+.jseat--unjudged { border-left-color: var(--line); }
+
+.jseat.is-onTurn {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+.jseat.is-away { opacity: 0.5; }
+
+.jseat__name {
+  display: flex;
+  gap: 0.3rem;
+  align-items: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.jseat__tag {
+  padding: 0 0.25rem;
+  border: 1px solid var(--line);
+  border-radius: 0.25rem;
+  font-size: 0.6rem;
+  color: var(--ink-dim);
+}
+
+.jseat__tally { font-variant-numeric: tabular-nums; }
+.jseat__bid { color: var(--accent); font-weight: 600; }
+.jseat__sep { color: var(--ink-dim); margin: 0 0.1rem; }
+.jseat__won { font-weight: 600; }
+.jseat__score {
+  min-width: 2.2rem;
+  text-align: right;
+  color: var(--ink-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Every number is offered, including the one the last-bidder rule forbids —
+   disabled and explained, rather than quietly absent. */
+.bidGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  justify-content: center;
+  margin: 0.8rem 0;
+}
+
+.bidChoice {
+  min-width: var(--tap);
+  min-height: var(--tap);
+  padding: 0.4rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .bidChoice:hover:not(:disabled) {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 16%, transparent);
+  }
+}
+
+.bidChoice.is-forbidden,
+.bidChoice:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  text-decoration: line-through;
+}
+
+.scoreTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.8rem 0;
+  font-size: 0.85rem;
+}
+
+.scoreTable th,
+.scoreTable td {
+  padding: 0.35rem 0.5rem;
+  text-align: right;
+  border-bottom: 1px solid var(--line);
+  font-variant-numeric: tabular-nums;
+}
+
+.scoreTable th:first-child,
+.scoreTable td:first-child {
+  text-align: left;
+  font-variant-numeric: normal;
+}
+
+.scoreTable th { color: var(--ink-dim); font-weight: 500; }
+.scoreTable tr.is-made td { color: var(--ink); }
+.scoreTable tr.is-missed td { color: var(--ink-dim); }

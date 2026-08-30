@@ -8,12 +8,13 @@ import type {
   WildAssignment,
 } from '@bukharo/game-engine';
 
+import type { JudgementView } from '@bukharo/game-judgement';
 import type { MindiView } from '@bukharo/game-mindi';
 
 import type { GameId } from './games.js';
 
 export type { GameView, RuleConfig, Seat, TeamId, WildAssignment };
-export type { MindiView };
+export type { JudgementView, MindiView };
 
 /**
  * A game's state, as a client sees it.
@@ -24,7 +25,8 @@ export type { MindiView };
  */
 export type GameSnapshot =
   | { gameId: 'bukharo'; view: GameView }
-  | { gameId: 'mindi'; view: MindiView };
+  | { gameId: 'mindi'; view: MindiView }
+  | { gameId: 'judgement'; view: JudgementView };
 export * from './games.js';
 
 /** §32 — no O/0 or I/1/l, so codes survive being read aloud. */
@@ -100,12 +102,19 @@ export interface BukharoActionPayload {
   wildAssignments?: WildAssignment[];
 }
 
+export type JudgementActionPayload =
+  | { type: 'PLACE_BID'; bid: number }
+  | { type: 'PLAY_CARD'; cardId: string };
+
 export type MindiActionPayload =
   | { type: 'CHOOSE_MODE'; mode: 'HIDDEN' | 'KATTE' }
   | { type: 'REVEAL_TRUMP' }
   | { type: 'PLAY_CARD'; cardId: string };
 
-export type GameActionPayload = BukharoActionPayload | MindiActionPayload;
+export type GameActionPayload =
+  | BukharoActionPayload
+  | MindiActionPayload
+  | JudgementActionPayload;
 
 export type ClientMessage =
   | {

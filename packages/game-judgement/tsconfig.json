@@ -3,10 +3,9 @@
     "target": "ES2022",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-    "lib": [
-      "ES2022"
-    ],
-    "rootDir": "src",
+    "lib": ["ES2022"],
+    "types": ["node"],
+    "rootDir": ".",
     "outDir": "dist",
     "composite": true,
     "declaration": true,
@@ -14,21 +13,9 @@
     "sourceMap": true,
     "strict": true,
     "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true
   },
-  "include": [
-    "src/**/*.ts"
-  ],
-  "references": [
-    {
-      "path": "../game-engine"
-    },
-    {
-      "path": "../game-mindi"
-    },
-    {
-      "path": "../game-judgement"
-    }
-  ]
+  "include": ["src/**/*.ts", "test/**/*.ts"]
 }

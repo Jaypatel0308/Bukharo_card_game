@@ -25,12 +25,18 @@ export const config = {
   webDir: path.resolve(process.env.WEB_DIR ?? path.join(repoRoot, 'apps/web/dist')),
 
   /** §54 — how long the table waits for a disconnected player before the host may act. */
-  disconnectGraceMs: num('DISCONNECT_GRACE_MS', 90_000),
+  disconnectGraceMs: num('DISCONNECT_GRACE_MS', 120_000),
   /** §65 — room expiry. */
   lobbyTtlMs: num('LOBBY_TTL_MS', 30 * 60_000),
   finishedTtlMs: num('FINISHED_TTL_MS', 24 * 60 * 60_000),
   abandonedTtlMs: num('ABANDONED_TTL_MS', 6 * 60 * 60_000),
   sweepIntervalMs: num('SWEEP_INTERVAL_MS', 60_000),
+  /**
+   * How often the table is checked for a player who has gone. Well under the
+   * grace period, so the backstop fires close to the two minutes promised
+   * rather than up to a sweep late.
+   */
+  absentCheckIntervalMs: num('ABSENT_CHECK_INTERVAL_MS', 5_000),
 
   /** §59 — how long processed action ids are remembered for deduplication. */
   actionIdTtlMs: num('ACTION_ID_TTL_MS', 5 * 60_000),

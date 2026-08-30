@@ -517,6 +517,66 @@ export class RoomManager {
   /* Housekeeping                                                      */
   /* ---------------------------------------------------------------- */
 
+  /**
+   * Plays for anyone who has been gone longer than the grace period.
+   *
+   * The host can skip a missing player at any point past that grace, but that
+   * fails in the case that matters most — when the host is the one who left,
+   * there is nobody with the button. This is the backstop: after the grace the
+   * server makes the least consequential legal move and the table carries on.
+   *
+   * A player who is merely slow is never touched. This looks only at players
+   * whose socket has actually gone.
+   *
+   * Returns the rooms that moved, for broadcasting.
+   */
+  async playForAbsentPlayers(now = Date.now()): Promise<string[]> {
+    const moved: string[] = [];
+    for (const room of [...this.rooms.values()]) {
+      // Cheap check outside the lock; everything is confirmed again inside it.
+      if (room.status !== 'PLAYING' || !room.game || !room.waitingForPlayerId) continue;
+      if (now - (room.waitingSince ?? now) < config.disconnectGraceMs) continue;
+
+      const playerId = room.waitingForPlayerId;
+      const result = await this.mutate(room.id, playerId, (locked) => {
+        // Re-check under the lock: they may have come back, or somebody may
+        // have skipped them, while this was queued.
+        if (locked.status !== 'PLAYING' || !locked.game) {
+          return fail('WRONG_PHASE', 'no longer playing');
+        }
+        if (locked.waitingForPlayerId !== playerId) return fail('WRONG_PHASE', 'no longer waiting');
+        if (now - (locked.waitingSince ?? now) < config.disconnectGraceMs) {
+          return fail('WRONG_PHASE', 'not yet due');
+        }
+        const player = locked.players.find((p) => p.id === playerId);
+        if (!player || player.connected) return fail('WRONG_PHASE', 'they are back');
+
+        const module = moduleFor(locked.gameId);
+        if (module.currentPlayerId(locked.game) !== playerId) {
+          return fail('WRONG_PHASE', 'the turn already moved on');
+        }
+
+        locked.game = module.skipCurrentPlayer(locked.game, 'disconnected', locked.settings);
+        module.stampLog(locked.game, now);
+        locked.waitingForPlayerId = null;
+        locked.waitingSince = null;
+
+        // If the next player is also gone, start their clock rather than
+        // leaving the table stalled with nobody being waited on.
+        const next = module.currentPlayerId(locked.game);
+        const nextPlayer = locked.players.find((p) => p.id === next);
+        if (locked.status === 'PLAYING' && nextPlayer && !nextPlayer.connected) {
+          locked.waitingForPlayerId = next;
+          locked.waitingSince = now;
+        }
+        return { ok: true as const, value: locked };
+      });
+
+      if (result.ok) moved.push(room.id);
+    }
+    return moved;
+  }
+
   /** §65 — drop rooms nobody is coming back to. Returns removed room ids. */
   async sweep(now = Date.now()): Promise<string[]> {
     const removed: string[] = [];

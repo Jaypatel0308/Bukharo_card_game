@@ -45,6 +45,16 @@ export interface GameDescriptor {
    * one game's rules while the player is setting up the other.
    */
   rules: string[];
+  /**
+   * Whether this game is played in teams.
+   *
+   * Bukharo and Mindi are both partnerships, which made "every game has two
+   * teams" look like a property of the platform. Judgement is scored per
+   * player, so it is a property of the game instead: when this is false the
+   * room seats nobody in a team, refuses to rename one, and the lobby leaves
+   * the team chrome out entirely.
+   */
+  hasTeams: boolean;
   /** True once the client can actually draw this game's table. */
   hasTable: boolean;
 }
@@ -64,6 +74,7 @@ export const GAMES: Record<GameId, GameDescriptor> = {
     targetOptions: [1000, 1500, 2000, 3000],
     defaultTarget: 2000,
     playerSummary: '4 players, 2 teams',
+    hasTeams: true,
     rules: [
       'Two decks and four jokers. Everyone gets 13 cards.',
       'One card from the middle of the stock sets the wild rank for the round.',
@@ -87,6 +98,7 @@ export const GAMES: Record<GameId, GameDescriptor> = {
     targetOptions: [1, 2, 3, 5],
     defaultTarget: 3,
     playerSummary: '4, 6 or 8 players, 2 teams',
+    hasTeams: true,
     rules: [
       'Partners sit alternately, so the player either side of you is an opponent.',
       'Every ten is a Mindi. Win the trick holding one and it counts for your team.',
@@ -116,6 +128,12 @@ export function describeGame(id: GameId): GameDescriptor {
  * Teams alternate around the table, so a position's team is simply whether it
  * is even or odd. That holds for four, six and eight players alike, and keeps
  * the two sides equal without anyone having to arrange it.
+ */
+/**
+ * Partners sit opposite, so alternate seats share a team.
+ *
+ * Only meaningful for a game with `hasTeams`; callers must check first, since
+ * a game without teams has no answer to this question.
  */
 export function teamForPosition(position: number): 'TEAM_A' | 'TEAM_B' {
   return position % 2 === 0 ? 'TEAM_A' : 'TEAM_B';

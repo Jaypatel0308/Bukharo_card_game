@@ -34,6 +34,7 @@ function appFor(state: GameState, viewerId: string): Bukharo {
     gameId: 'bukharo',
     status: 'PLAYING',
     target: 2000,
+    hasTeams: true,
     hostId: 'p1',
     teamNames: { TEAM_A: 'Rockets', TEAM_B: 'Comets' },
     players: SEATS.map((s, position) => ({

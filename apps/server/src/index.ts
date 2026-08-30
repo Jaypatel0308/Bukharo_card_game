@@ -454,6 +454,18 @@ const heartbeat = setInterval(() => {
   }
 }, 30_000);
 
+/**
+ * Moves the table past anyone who has been gone too long.
+ *
+ * The host's skip button covers the ordinary case, but not the one where the
+ * host is the player who vanished. This runs regardless of who is missing.
+ */
+const absentWatch = setInterval(() => {
+  void manager.playForAbsentPlayers().then((moved) => {
+    for (const roomId of moved) broadcastRoom(roomId);
+  });
+}, config.absentCheckIntervalMs);
+
 const sweeper = setInterval(() => {
   void manager.sweep().then((removed) => {
     for (const roomId of removed) {
@@ -477,6 +489,7 @@ server.listen(config.port, config.host, () => {
 
 function shutdown(): void {
   clearInterval(heartbeat);
+  clearInterval(absentWatch);
   clearInterval(sweeper);
   wss.close();
   server.close(() => process.exit(0));

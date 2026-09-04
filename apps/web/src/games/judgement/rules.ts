@@ -56,3 +56,35 @@ export function biddingSummary(view: JudgementView): string {
 export function trumpLabel(suit: JudgementView['trump']): string {
   return { spades: '♠', diamonds: '♦', clubs: '♣', hearts: '♥' }[suit];
 }
+
+/**
+ * Where each player sits, as an angle in degrees.
+ *
+ * The viewer is always at the bottom of the table and everyone else is spread
+ * evenly around the ellipse in seating order, so the person on your left is on
+ * your left on screen. Returned as angles rather than fixed slots because the
+ * table takes anywhere from two to ten.
+ */
+export function seatAngles(view: JudgementView): Map<string, number> {
+  const order = [...view.players].sort((a, b) => a.position - b.position);
+  const youIndex = view.you ? order.findIndex((p) => p.id === view.you!.id) : 0;
+  const count = order.length;
+
+  const angles = new Map<string, number>();
+  order.forEach((player, index) => {
+    // 90° is the bottom of the screen, where the viewer sits; play runs
+    // clockwise from there.
+    const seatsFromYou = (index - youIndex + count) % count;
+    angles.set(player.id, 90 + (seatsFromYou * 360) / count);
+  });
+  return angles;
+}
+
+/** A point on the table ellipse, as percentages for CSS positioning. */
+export function seatPoint(angleDeg: number, radiusX = 42, radiusY = 38): { x: number; y: number } {
+  const radians = (angleDeg * Math.PI) / 180;
+  return {
+    x: 50 + Math.cos(radians) * radiusX,
+    y: 50 + Math.sin(radians) * radiusY,
+  };
+}

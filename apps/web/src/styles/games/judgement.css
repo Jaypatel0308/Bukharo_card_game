@@ -9,88 +9,159 @@
   white-space: nowrap;
 }
 
-.jseats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  justify-content: center;
-  padding: 0.4rem;
+/* ---- The table ---- */
+
+/*
+ * Players sit round an oval and each card lies in front of whoever played it,
+ * so the trick reads as a table rather than a list. Positions come from the
+ * component as percentages, because the seating depends on how many are
+ * playing and on who is looking.
+ */
+.jtable {
+  position: relative;
+  width: min(100%, 34rem);
+  aspect-ratio: 4 / 3;
+  margin: 0.25rem auto;
+}
+
+.jtable__felt {
+  position: absolute;
+  inset: 12% 8%;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at center,
+    color-mix(in srgb, var(--accent) 8%, transparent),
+    transparent 70%
+  );
+}
+
+.jtable__empty,
+.jtable__result {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
   margin: 0;
-  list-style: none;
+  color: var(--ink-dim);
+  font-size: 0.8rem;
+  text-align: center;
+  pointer-events: none;
+}
+
+.jtable__result {
+  top: auto;
+  bottom: 6%;
+  transform: translateX(-50%);
+  color: var(--ink);
+  font-weight: 600;
 }
 
 .jseat {
+  position: absolute;
+  transform: translate(-50%, -50%);
   display: grid;
-  grid-template-columns: 1fr auto auto;
-  gap: 0.5rem;
-  align-items: center;
-  min-width: 8.5rem;
-  padding: 0.35rem 0.55rem;
+  gap: 0.1rem;
+  justify-items: center;
+  min-width: 5.5rem;
+  padding: 0.3rem 0.45rem;
   border: 1px solid var(--line);
-  border-left: 3px solid var(--line);
+  border-top: 3px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface);
-  font-size: 0.8rem;
+  font-size: 0.7rem;
+  text-align: center;
 }
 
 /* Where a player stands against their own judgement — the only thing that
    matters, and what a bare trick count does not tell you. */
-.jseat--needs-more { border-left-color: var(--accent); }
-.jseat--exact { border-left-color: #3fb950; }
-.jseat--overshot { border-left-color: #f85149; }
-.jseat--unjudged { border-left-color: var(--line); }
+.jseat--needs-more { border-top-color: var(--accent); }
+.jseat--exact { border-top-color: #3fb950; }
+.jseat--overshot { border-top-color: #f85149; }
+.jseat--unjudged { border-top-color: var(--line); }
 
 .jseat.is-onTurn {
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent);
 }
 
-.jseat.is-away { opacity: 0.5; }
+.jseat.is-away { opacity: 0.45; }
 
 .jseat__name {
   display: flex;
-  gap: 0.3rem;
+  gap: 0.25rem;
   align-items: center;
+  max-width: 7rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-weight: 600;
 }
 
 .jseat__tag {
+  padding: 0 0.2rem;
+  border: 1px solid var(--line);
+  border-radius: 0.2rem;
+  font-size: 0.55rem;
+  color: var(--ink-dim);
+}
+
+.jseat__chips { display: flex; gap: 0.2rem; }
+
+.jseat__chip {
   padding: 0 0.25rem;
   border: 1px solid var(--line);
   border-radius: 0.25rem;
   font-size: 0.6rem;
-  color: var(--ink-dim);
-}
-
-.jseat__tally { font-variant-numeric: tabular-nums; }
-.jseat__bid { color: var(--accent); font-weight: 600; }
-.jseat__sep { color: var(--ink-dim); margin: 0 0.1rem; }
-.jseat__won { font-weight: 600; }
-.jseat__score {
-  min-width: 2.2rem;
-  text-align: right;
-  color: var(--ink-dim);
   font-variant-numeric: tabular-nums;
 }
 
-/* Every number is offered, including the one the last-bidder rule forbids —
-   disabled and explained, rather than quietly absent. */
+.jseat__chip--bid { color: var(--accent); }
+.jseat__chip--won { color: var(--ink); }
+.jseat__score { color: var(--ink-dim); font-variant-numeric: tabular-nums; }
+
+.jplay {
+  position: absolute;
+  transform: translate(-50%, -50%);
+}
+
+.jplay.is-winner {
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 70%, transparent));
+}
+
+/* ---- Judging ---- */
+
+/*
+ * A bar under the hand, not a dialog over it. As a modal it asked the first
+ * player for a number before they had seen a single one of their cards.
+ */
+.bidbar {
+  padding: 0.5rem 0.75rem 0.75rem;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.bidbar__title {
+  margin: 0 0 0.4rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: center;
+  color: var(--ink);
+}
+
 .bidGrid {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
+  gap: 0.35rem;
   justify-content: center;
-  margin: 0.8rem 0;
 }
 
 .bidChoice {
   min-width: var(--tap);
   min-height: var(--tap);
-  padding: 0.4rem 0.7rem;
+  padding: 0.35rem 0.6rem;
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: var(--surface);
+  background: var(--bg);
   color: var(--ink);
   font: inherit;
   font-size: 1rem;
@@ -112,27 +183,77 @@
   text-decoration: line-through;
 }
 
+/* ---- The score board ---- */
+
+.scoreScroll {
+  max-height: 55vh;
+  overflow: auto;
+  margin: 0.6rem 0;
+}
+
 .scoreTable {
   width: 100%;
   border-collapse: collapse;
-  margin: 0.8rem 0;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
 }
 
 .scoreTable th,
 .scoreTable td {
-  padding: 0.35rem 0.5rem;
-  text-align: right;
+  padding: 0.3rem 0.45rem;
+  text-align: center;
   border-bottom: 1px solid var(--line);
   font-variant-numeric: tabular-nums;
 }
 
-.scoreTable th:first-child,
-.scoreTable td:first-child {
-  text-align: left;
-  font-variant-numeric: normal;
+.scoreTable thead th {
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  color: var(--ink-dim);
+  font-weight: 500;
 }
 
-.scoreTable th { color: var(--ink-dim); font-weight: 500; }
-.scoreTable tr.is-made td { color: var(--ink); }
-.scoreTable tr.is-missed td { color: var(--ink-dim); }
+.scoreTable__player { color: var(--accent); font-weight: 600; }
+.scoreTable__trump { color: var(--ink-dim); white-space: nowrap; }
+.scoreTable__suit { display: none; }
+.scoreTable__round { color: var(--ink-dim); }
+
+.scoreTable__points {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+/* What was judged against what was taken — the reason a zero is a zero. */
+.scoreTable__detail {
+  display: block;
+  font-size: 0.65rem;
+  color: var(--ink-dim);
+}
+
+.scoreTable td.is-made .scoreTable__points { color: #3fb950; }
+.scoreTable td.is-missed .scoreTable__points { color: #f85149; }
+
+.scoreTable tfoot td {
+  border-top: 2px solid var(--line);
+  border-bottom: none;
+  padding-top: 0.5rem;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.scoreTable__total.is-leading { color: var(--accent); }
+
+.scoreTable__empty {
+  padding: 1rem;
+  color: var(--ink-dim);
+  font-style: italic;
+}
+
+/* A phone is narrow: let the widest thing on screen be the table, not the row
+   of buttons, and give the seats less to take up. */
+@media (max-width: 480px) {
+  .jtable { aspect-ratio: 1 / 1; }
+  .jseat { min-width: 4.4rem; font-size: 0.62rem; padding: 0.25rem 0.3rem; }
+  .jseat__name { max-width: 4.5rem; }
+}

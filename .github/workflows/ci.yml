@@ -9,55 +9,86 @@ on:
   push:
     branches: [main]
 
-# A new push to the same branch makes the previous run irrelevant.
+# One run per pull request, or per branch for a direct push. Keyed on the PR
+# number rather than the ref, because a pull_request event and a push to the
+# same branch carry different refs and would otherwise both run.
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
   test:
     runs-on: ubuntu-latest
-    # Headroom for a slow registry day: a seven-minute `npm ci` should not eat
-    # the budget the tests need.
-    timeout-minutes: 25
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: npm
 
-      # --include=dev is explicit because TypeScript and Vite are dev
-      # dependencies and there is nothing to build without them.
-      - run: npm ci --include=dev
+      # setup-node's cache holds the downloaded tarballs, not the installed
+      # tree, so every job still unpacked and linked everything — four to seven
+      # minutes each, against ninety seconds of actual work. This caches the
+      # tree itself, keyed on the lock file, so an unchanged lock file means no
+      # install at all.
+      - name: Restore node_modules
+        id: modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            apps/*/node_modules
+            packages/*/node_modules
+          key: modules-${{ runner.os }}-node22-${{ hashFiles('package-lock.json') }}
+
+      # No restore-keys on purpose: a partial hit would leave a tree that does
+      # not match the lock file, which is worse than installing.
+      - name: Install
+        if: steps.modules.outputs.cache-hit != 'true'
+        run: npm ci --include=dev --no-audit --fund=false
 
       # Bugs rather than style: hook dependencies, unused bindings, missing
       # accessibility attributes. Warnings fail too, so suppressions stay
       # deliberate instead of accumulating.
       - run: npm run lint
 
-      # Compiles the engine, the shared protocol, the server and the web
+      # Compiles every engine, the shared protocol, the server and the web
       # client, so a type error anywhere fails the build.
       - run: npm run build
 
-      # The engine suite, the server suite against a real process, and the
-      # client suite in jsdom.
-      - run: npm test
+      # The suites and the coverage numbers in one pass. These used to be two
+      # jobs running the same tests twice, the second only to print a
+      # percentage.
+      - name: Test, with coverage
+        run: |
+          set -o pipefail
+          npm run coverage 2>&1 | tee coverage.txt
 
-      # The audits come last, and are bounded.
+      - name: Report coverage
+        if: always()
+        run: |
+          {
+            echo '### Coverage'
+            echo
+            echo 'Engine and server line coverage; the client is largely covered'
+            echo 'by the browser job, which this does not see.'
+            echo
+            echo '```'
+            grep -E "all files|All files" coverage.txt || tail -5 coverage.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # The audits come last, and are bounded in the shell.
       #
       # They talk to the registry, and they used to run before the tests. On a
-      # slow day `npm ci` took seven minutes and the two audits another nine,
-      # so the job hit its limit having never once run lint, build or test —
-      # a red build that said nothing about the code. Verification first;
-      # anything network-bound afterwards, on a leash.
-      #
-      # Bounded in the shell rather than by `timeout-minutes`, because a step
-      # that hits a step timeout cancels the whole job — `continue-on-error`
-      # does not save it. A real advisory still fails the build; a registry
-      # that will not answer only warns.
+      # slow day the job hit its limit having never run lint, build or test — a
+      # red build that said nothing about the code. A step that hits
+      # `timeout-minutes` cancels the whole job, which `continue-on-error` does
+      # not prevent, so the bound is a plain `timeout` instead.
       - name: Audit what ships
+        if: always()
         run: |
           set +e
           timeout 180 npm audit --omit=dev --audit-level=high
@@ -84,57 +115,49 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
-  coverage:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: actions/setup-node@v7
-        with:
-          node-version: '22'
-          cache: npm
-
-      - run: npm ci --include=dev
-
-      # Reported, not enforced. A threshold here would mostly measure how much
-      # of the client the jsdom suite happens to touch, when the browser job is
-      # what actually covers it. The number is for reading, not for gating.
-      - name: Measure coverage
-        run: |
-          npm run coverage > coverage.txt 2>&1 || true
-          {
-            echo '### Coverage'
-            echo
-            echo 'Engine and server line coverage; the client is largely covered'
-            echo 'by the browser job, which this does not see.'
-            echo
-            echo '```'
-            grep -E "all files|All files" coverage.txt || tail -5 coverage.txt
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
-
   browser:
     name: browser
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: npm
 
-      - run: npm ci --include=dev
+      - name: Restore node_modules
+        id: modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            apps/*/node_modules
+            packages/*/node_modules
+          key: modules-${{ runner.os }}-node22-${{ hashFiles('package-lock.json') }}
+
+      - name: Install
+        if: steps.modules.outputs.cache-hit != 'true'
+        run: npm ci --include=dev --no-audit --fund=false
+
+      # Chromium is cached separately, since it is pinned to the Playwright
+      # version rather than to the lock file as a whole.
+      - name: Restore Chromium
+        id: browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
 
       # Its own job: downloading a browser is slow, and a failure here should
       # be distinguishable at a glance from a unit test failing.
-      - run: npx playwright install --with-deps chromium
-
       - run: npm run test:e2e
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: playwright-traces
@@ -154,14 +177,26 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: npm
 
-      - run: npm ci --include=dev
+      - name: Restore node_modules
+        id: modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            apps/*/node_modules
+            packages/*/node_modules
+          key: modules-${{ runner.os }}-node22-${{ hashFiles('package-lock.json') }}
+
+      - name: Install
+        if: steps.modules.outputs.cache-hit != 'true'
+        run: npm ci --include=dev --no-audit --fund=false
 
       - name: Smoke test the deployment
         env:

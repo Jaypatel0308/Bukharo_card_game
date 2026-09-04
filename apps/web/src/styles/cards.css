@@ -26,7 +26,13 @@
   border-radius: var(--card-radius);
   background: var(--card-face);
   color: var(--card-black);
-  font-family: "Helvetica Neue", Helvetica, Arial, system-ui, sans-serif;
+  /*
+   * A serif, because a playing card is printed rather than typed. The stack
+   * is what every platform already has, so no font has to be fetched before
+   * a hand can be read.
+   */
+  font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia,
+    "Times New Roman", serif;
   font-weight: 700;
   /* A crisp edge and a close contact shadow. Online card faces are flat: the
      depth comes from the shadow, not from gradients across the face. */
@@ -37,6 +43,57 @@
   user-select: none;
   overflow: hidden;
 }
+
+/*
+ * The lattice printed across the face.
+ *
+ * Two rotated grids of soft diamonds, which is enough to read as engraved
+ * stock at card size without turning into noise behind the pips. Drawn with
+ * gradients rather than an image so it costs nothing to load and scales with
+ * the card.
+ */
+.card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-image:
+    repeating-linear-gradient(
+      45deg,
+      var(--card-lattice) 0 1px,
+      transparent 1px calc(var(--card-w) * 0.11)
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      var(--card-lattice) 0 1px,
+      transparent 1px calc(var(--card-w) * 0.11)
+    );
+  pointer-events: none;
+}
+
+/* A hairline frame around the pip field, as printed decks have. */
+.card::after {
+  content: '';
+  position: absolute;
+  inset: calc(var(--card-w) * 0.15) calc(var(--card-w) * 0.13);
+  border: 1px solid var(--card-frame);
+  border-radius: calc(var(--card-radius) * 0.6);
+  pointer-events: none;
+}
+
+/* Everything printed sits above the lattice. */
+.card__index,
+.card__pips,
+.card__centre,
+.card__chosen,
+.card__new,
+.card__representing {
+  position: relative;
+  z-index: 1;
+}
+
+/* The frame is decoration; on the smallest cards it only crowds the pips. */
+.card--xs::after { display: none; }
 
 .card--xs { --card-w: 1.9rem; }
 .card--sm { --card-w: 2.5rem; }
@@ -146,9 +203,42 @@
   justify-content: center;
 }
 
+/*
+ * The ace, given the flourish a printed deck gives it: one oversized pip
+ * inside a ruled medallion. It is the card people look for across a table,
+ * and a bare glyph made it the least distinctive one in the deck.
+ */
 .card__centre--ace {
-  font-size: calc(var(--card-w) * 0.78);
+  display: grid;
+  place-items: center;
+  font-size: calc(var(--card-w) * 0.62);
   line-height: 1;
+}
+
+.card__centre--ace::before {
+  content: '';
+  position: absolute;
+  width: calc(var(--card-w) * 0.62);
+  height: calc(var(--card-w) * 0.62);
+  border: 1px solid var(--card-frame);
+  border-radius: 50%;
+  transform: rotate(45deg);
+}
+
+.card__centre--ace::after {
+  content: '';
+  position: absolute;
+  width: calc(var(--card-w) * 0.5);
+  height: calc(var(--card-w) * 0.5);
+  border: 1px solid var(--card-frame);
+  transform: rotate(45deg);
+}
+
+/* Too small to hold a medallion; the pip alone still reads as an ace. */
+.card--xs .card__centre--ace::before,
+.card--xs .card__centre--ace::after,
+.card--sm .card__centre--ace::after {
+  display: none;
 }
 
 /*
@@ -182,8 +272,13 @@
   box-shadow: none;
 }
 
+/*
+ * The joker is inked in the deck's own red, not the interface's accent. A
+ * purple card in a hand of cream, vermilion and near-black looked like it had
+ * come from a different box.
+ */
 .card--joker {
-  color: #6b21a8;
+  color: var(--card-red);
 }
 
 .card__centre--joker {
@@ -196,9 +291,10 @@
 }
 
 .card__jokerWord {
-  font-size: calc(var(--card-w) * 0.14);
-  font-weight: 800;
-  letter-spacing: 0.1em;
+  font-size: calc(var(--card-w) * 0.13);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  font-variant: small-caps;
 }
 
 .card--xs .card__jokerWord,

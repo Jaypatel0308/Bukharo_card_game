@@ -580,6 +580,23 @@ export class RoomManager {
     return moved;
   }
 
+  /**
+   * How much play is going on right now.
+   *
+   * Reported by /health so a deploy can be held back while a game is running:
+   * this deployment has no persistent disk, so deploying ends every match.
+   */
+  liveActivity(): { rooms: number; players: number } {
+    let rooms = 0;
+    let players = 0;
+    for (const room of this.rooms.values()) {
+      if (room.status !== 'PLAYING' && room.status !== 'ROUND_END') continue;
+      rooms += 1;
+      players += room.players.filter((p) => p.connected).length;
+    }
+    return { rooms, players };
+  }
+
   /** §65 — drop rooms nobody is coming back to. Returns removed room ids. */
   async sweep(now = Date.now()): Promise<string[]> {
     const removed: string[] = [];

@@ -1,6 +1,7 @@
 import { DEFAULT_TEAM_NAMES, cardLabel, createDeck } from './cards.js';
 import {
   assignmentsOf,
+  keepsPlacedWilds,
   selectResolution,
   validateMeld,
   validateOpeningRun,
@@ -23,6 +24,7 @@ import type {
   RoundScoreRecord,
   Seat,
   TeamId,
+  WildAssignment,
 } from './types.js';
 
 /** §4 — play runs clockwise. */
@@ -776,7 +778,20 @@ function addToMeld(
     );
   }
 
-  const selected = selectResolution(validation.resolutions, action.wildAssignments);
+  // The wilds already lying in this meld keep what they were played as, so
+  // adding a card cannot quietly slide one into a different slot. Readings
+  // that move them are only considered when nothing else fits.
+  const placed: WildAssignment[] = meld.cards
+    .filter((c) => c.role === 'WILD')
+    .map((c) => ({
+      cardId: c.card.id,
+      representedRank: c.representedRank,
+      representedSuit: c.representedSuit,
+    }));
+  const faithful = validation.resolutions.filter((r) => keepsPlacedWilds(r, placed));
+  const candidates = faithful.length > 0 ? faithful : validation.resolutions;
+
+  const selected = selectResolution(candidates, action.wildAssignments);
   if (!selected.ok) {
     return fail(
       'AMBIGUOUS_WILD',

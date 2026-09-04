@@ -31,8 +31,15 @@ const SUITS = new Set(['clubs', 'diamonds', 'hearts', 'spades']);
  * an internal error rather than a refusal. Anything that is not a well-formed
  * list is dropped, which simply lets the engine resolve the wild itself.
  */
+/**
+ * A player's answer to "what should your wild card represent?".
+ *
+ * An empty array is a real answer, not a missing one: it means the reading
+ * where nothing is wild — the round's wild rank played at its face value. It
+ * used to be discarded here, which left that reading impossible to choose.
+ */
 function asWildAssignments(value: unknown): WildAssignment[] | undefined {
-  if (!Array.isArray(value) || value.length === 0 || value.length > 30) return undefined;
+  if (!Array.isArray(value) || value.length > 30) return undefined;
 
   const assignments: WildAssignment[] = [];
   for (const entry of value) {

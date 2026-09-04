@@ -4,18 +4,33 @@ import { SUIT_SYMBOL } from '../../ui/cards';
 
 interface Props {
   options: WildAssignment[][];
+  /** The rank that is wild this round, so the plain reading can be named. */
+  wildRank: string | null;
   onChoose(assignments: WildAssignment[]): void;
   onCancel(): void;
 }
 
-function describe(assignments: WildAssignment[]): string {
-  return assignments
-    .map((a) => `${a.representedRank}${a.representedSuit ? SUIT_SYMBOL[a.representedSuit] : ''}`)
-    .join(' + ');
+/**
+ * What a reading does with the wild cards, in words.
+ *
+ * The reading where nothing is wild carries no assignments at all, so it used
+ * to render as an empty button — the option to play a wild-rank card at its
+ * face value was on screen the whole time, unlabelled and unrecognisable.
+ */
+function describe(assignments: WildAssignment[], wildRank: string | null): string {
+  if (assignments.length === 0) {
+    return wildRank
+      ? `Nothing wild — the ${wildRank} counts as an ordinary ${wildRank}`
+      : 'Nothing wild — every card at its face value';
+  }
+  const parts = assignments.map(
+    (a) => `${a.representedRank}${a.representedSuit ? SUIT_SYMBOL[a.representedSuit] : ''}`,
+  );
+  return `Wild as ${parts.join(' + ')}`;
 }
 
 /** §43 — only shown when the server found more than one legal reading. */
-export function WildChooser({ options, onChoose, onCancel }: Props) {
+export function WildChooser({ options, wildRank, onChoose, onCancel }: Props) {
   return (
     <div className="modal" role="dialog" aria-modal="true" aria-label="Choose what your wild card represents">
       <div className="modal__body">
@@ -29,7 +44,7 @@ export function WildChooser({ options, onChoose, onCancel }: Props) {
               className="button button--primary chooser__option"
               onClick={() => onChoose(assignments)}
             >
-              {describe(assignments)}
+              {describe(assignments, wildRank)}
             </button>
           ))}
         </div>

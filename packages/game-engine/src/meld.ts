@@ -386,6 +386,28 @@ function signatureOf(type: MeldType, cards: MeldCard[]): string {
 }
 
 /** The wild interpretations a client would need to choose between. */
+/**
+ * Whether a reading leaves every already-placed wild where the player put it.
+ *
+ * A wild that has been laid down means something: a 10 played as a 7 is a 7.
+ * Re-reading the meld when a card is added could slide it to another slot,
+ * turning that 7 into a 10 behind the player's back.
+ */
+export function keepsPlacedWilds(
+  resolution: MeldResolution,
+  placed: WildAssignment[],
+): boolean {
+  return placed.every((wild) =>
+    resolution.cards.some(
+      (c) =>
+        c.card.id === wild.cardId &&
+        c.role === 'WILD' &&
+        c.representedRank === wild.representedRank &&
+        (wild.representedSuit == null || c.representedSuit === wild.representedSuit),
+    ),
+  );
+}
+
 export function assignmentsOf(resolution: MeldResolution): WildAssignment[] {
   return resolution.cards
     .filter((c) => c.role === 'WILD')
@@ -427,7 +449,11 @@ export function selectResolution(
   resolutions: MeldResolution[],
   assignments: WildAssignment[] | undefined,
 ): { ok: true; resolution: MeldResolution } | { ok: false; options: MeldResolution[] } {
-  if (assignments && assignments.length > 0) {
+  // An empty list is a choice, not the absence of one: it asks for the reading
+  // in which nothing is wild. Requiring a non-empty list made the cleanest
+  // reading unselectable — a player holding 8, 9 and a wild-rank 10 could
+  // never say they meant it as an ordinary 10.
+  if (assignments) {
     const match = resolutions.find((r) => matchesAssignments(r, assignments));
     if (match) return { ok: true, resolution: match };
   }

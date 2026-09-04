@@ -277,6 +277,7 @@ export function BukharoTable({ app, game }: { app: Bukharo; game: GameView }) {
       {app.pendingWild && (
         <WildChooser
           options={app.pendingWild.options}
+          wildRank={game.wildRank}
           onCancel={app.cancelWildChoice}
           onChoose={app.pendingWild.retry}
         />

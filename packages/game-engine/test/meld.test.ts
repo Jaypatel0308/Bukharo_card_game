@@ -1,7 +1,15 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { validateMeld, validateOpeningRun, validateRun, validateSet, selectResolution } from '../src/meld.js';
+import {
+  assignmentsOf,
+  keepsPlacedWilds,
+  selectResolution,
+  validateMeld,
+  validateOpeningRun,
+  validateRun,
+  validateSet,
+} from '../src/meld.js';
 import { card, joker, rules } from './helpers.js';
 
 const ctx = (wildRank: Parameters<typeof card>[0] | null = '6') => ({
@@ -233,5 +241,113 @@ describe('meld type inference', () => {
     const result = validateMeld([card('9', 'clubs'), card('10', 'hearts'), card('J', 'clubs')], ctx('K'));
     assert.equal(result.ok, false);
     assert.match(result.ok === false ? result.message : '', /same suit|consecutive/);
+  });
+});
+
+describe('a wild-rank card played at its face value (§99.5)', () => {
+  const ctx = { wildRank: '10' as const, rules: rules() };
+
+  it('offers the reading where nothing is wild', () => {
+    // 8, 9 and a 10 of hearts, in a round where tens are wild.
+    const cards = [card('8', 'hearts'), card('9', 'hearts'), card('10', 'hearts')];
+    const result = validateRun(cards, ctx);
+    assert.equal(result.ok, true);
+    const clean = result.ok && result.resolutions.find((r) => r.isClean);
+    assert.ok(clean, 'a clean 8-9-10 should be one of the readings');
+  });
+
+  it('lets the player actually choose it — an empty answer is an answer', () => {
+    const cards = [card('8', 'hearts'), card('9', 'hearts'), card('10', 'hearts')];
+    const result = validateRun(cards, ctx);
+    assert.equal(result.ok, true);
+    if (!result.ok) return;
+
+    // The reading with no wilds carries no assignments, so choosing it means
+    // sending an empty list. Treating that as "no choice made" left it
+    // impossible to pick, and the player was asked the same question forever.
+    const chosen = selectResolution(result.resolutions, []);
+    assert.equal(chosen.ok, true, 'the clean reading must be selectable');
+    if (chosen.ok) {
+      assert.equal(chosen.resolution.isClean, true);
+      assert.deepEqual(
+        chosen.resolution.cards.map((c) => `${c.representedRank}${c.role === 'WILD' ? '*' : ''}`),
+        ['8', '9', '10'],
+      );
+    }
+  });
+
+  it('still asks, rather than guessing, when the readings really differ', () => {
+    const cards = [card('8', 'hearts'), card('9', 'hearts'), card('10', 'hearts')];
+    const result = validateRun(cards, ctx);
+    assert.equal(result.ok, true);
+    if (!result.ok) return;
+
+    // Nothing chosen: 7-8-9 and 8-9-10 are genuinely different melds.
+    const undecided = selectResolution(result.resolutions, undefined);
+    assert.equal(undecided.ok, false, 'the player should be asked');
+    if (!undecided.ok) {
+      assert.equal(undecided.options.length, 2);
+      // And one of the options offered is the empty one they can now pick.
+      const empty = undecided.options.filter((o) => assignmentsOf(o).length === 0);
+      assert.equal(empty.length, 1, 'the clean reading must be on the menu');
+    }
+  });
+
+  it('extends a run with the wild rank as an ordinary card', () => {
+    // 2 through 9 of diamonds, adding the 10 of diamonds as a real 10.
+    const run = ['2', '3', '4', '5', '6', '7', '8', '9'].map((rank) =>
+      card(rank as Parameters<typeof card>[0], 'diamonds'),
+    );
+    const result = validateRun([...run, card('10', 'diamonds')], ctx);
+    assert.equal(result.ok, true);
+    if (!result.ok) return;
+
+    const chosen = selectResolution(result.resolutions, []);
+    assert.equal(chosen.ok, true);
+    if (chosen.ok) {
+      assert.equal(chosen.resolution.isClean, true, '2-10 with no wilds at all');
+      assert.equal(chosen.resolution.cards.length, 9);
+      assert.equal(chosen.resolution.cards.at(-1)!.representedRank, '10');
+      assert.equal(chosen.resolution.cards.at(-1)!.role, 'NATURAL');
+    }
+  });
+});
+
+describe('a wild already lying in a meld stays where it was put', () => {
+  it('keeps a 10 played as a 7 as a 7 when the run is extended', () => {
+    const ctx = { wildRank: '10' as const, rules: rules() };
+    // 7*, 8, 9 — the wild is standing in for the seven.
+    const laid = validateRun(
+      [card('10', 'clubs'), card('8', 'clubs'), card('9', 'clubs')],
+      ctx,
+    );
+    assert.equal(laid.ok, true);
+    if (!laid.ok) return;
+    const asSeven = laid.resolutions.find(
+      (r) => r.cards.some((c) => c.role === 'WILD' && c.representedRank === '7'),
+    );
+    assert.ok(asSeven, 'the wild can stand in for the seven');
+
+    const placed = assignmentsOf(asSeven);
+    assert.equal(placed.length, 1);
+    assert.equal(placed[0]!.representedRank, '7');
+
+    // Now a jack arrives. 8-9-10-J would also be a legal run, but only by
+    // moving the wild from the seven to the ten, which is not the player's.
+    const extended = validateRun(
+      [...asSeven.cards.map((c) => c.card), card('J', 'clubs')],
+      ctx,
+    );
+    assert.equal(extended.ok, true);
+    if (!extended.ok) return;
+
+    const faithful = extended.resolutions.filter((r) => keepsPlacedWilds(r, placed));
+    for (const reading of faithful) {
+      const wild = reading.cards.find((c) => c.role === 'WILD');
+      assert.equal(wild?.representedRank, '7', 'the wild must still be the seven');
+    }
+    // And a reading that moved it is correctly rejected by the filter.
+    const moved = extended.resolutions.filter((r) => !keepsPlacedWilds(r, placed));
+    assert.ok(moved.length > 0, 'there was a tempting reading that moved it');
   });
 });

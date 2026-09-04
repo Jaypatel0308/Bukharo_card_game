@@ -7,7 +7,12 @@ services:
     plan: free
     # --include=dev is required: Render sets NODE_ENV=production, which would
     # otherwise skip TypeScript and Vite and leave nothing to build with.
-    buildCommand: npm ci --include=dev && npm run build
+    #
+    # The rest is about deploy time. Compiling takes about three seconds; the
+    # wait is almost entirely `npm ci`. --no-audit and --fund skip two network
+    # round trips npm makes by default and this build has no use for, and
+    # --prefer-offline takes what is already cached.
+    buildCommand: npm ci --include=dev --no-audit --fund=false --prefer-offline && npm run build
     startCommand: npm start
     healthCheckPath: /health
     # Rooms live in this process's memory, so a second instance would not be
@@ -21,3 +26,7 @@ services:
     envVars:
       - key: NODE_VERSION
         value: "22"
+      # Nothing in a deploy runs a browser, and this stops Playwright fetching
+      # one should a future version reinstate its install script.
+      - key: PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD
+        value: "1"

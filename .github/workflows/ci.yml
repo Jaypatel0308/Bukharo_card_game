@@ -17,7 +17,9 @@ concurrency:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Headroom for a slow registry day: a seven-minute `npm ci` should not eat
+    # the budget the tests need.
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
 
@@ -29,26 +31,6 @@ jobs:
       # --include=dev is explicit because TypeScript and Vite are dev
       # dependencies and there is nothing to build without them.
       - run: npm ci --include=dev
-
-      # Only what actually ships can fail the build. The dev toolchain carries
-      # advisories of its own — a bug in the test runner is not a bug in the
-      # game — and those are reported in the step below without blocking.
-      - name: Audit what ships
-        run: npm audit --omit=dev --audit-level=high
-
-      - name: Audit the toolchain (advisory only)
-        if: always()
-        run: |
-          npm audit --audit-level=moderate > audit.txt 2>&1 || true
-          {
-            echo '### Dev dependency advisories'
-            echo
-            echo 'Not blocking: these are build and test tools, not shipped code.'
-            echo
-            echo '```'
-            tail -20 audit.txt
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
 
       # Bugs rather than style: hook dependencies, unused bindings, missing
       # accessibility attributes. Warnings fail too, so suppressions stay
@@ -62,6 +44,33 @@ jobs:
       # The engine suite, the server suite against a real process, and the
       # client suite in jsdom.
       - run: npm test
+
+      # The audits come last, and are bounded.
+      #
+      # They talk to the registry, and they used to run before the tests. On a
+      # slow day `npm ci` took seven minutes and the two audits another nine,
+      # so the job hit its limit having never once run lint, build or test —
+      # a red build that said nothing about the code. Verification first;
+      # anything network-bound afterwards, on a leash.
+      - name: Audit what ships
+        timeout-minutes: 4
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Audit the toolchain (advisory only)
+        if: always()
+        timeout-minutes: 4
+        continue-on-error: true
+        run: |
+          npm audit --audit-level=moderate > audit.txt 2>&1 || true
+          {
+            echo '### Dev dependency advisories'
+            echo
+            echo 'Not blocking: these are build and test tools, not shipped code.'
+            echo
+            echo '```'
+            tail -20 audit.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
   coverage:
     runs-on: ubuntu-latest

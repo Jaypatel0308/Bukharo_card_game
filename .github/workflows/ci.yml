@@ -8,6 +8,10 @@ on:
     branches: [main]
   push:
     branches: [main]
+  # The audit job only. Advisories appear because the world changed, not
+  # because this branch did, so a weekly look is the right cadence.
+  schedule:
+    - cron: '0 6 * * 1'
 
 # One run per pull request, or per branch for a direct push. Keyed on the PR
 # number rather than the ref, because a pull_request event and a push to the
@@ -77,41 +81,6 @@ jobs:
             echo
             echo '```'
             grep -E "all files|All files" coverage.txt || tail -5 coverage.txt
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
-
-      # The audits come last, and are bounded in the shell.
-      #
-      # They talk to the registry, and they used to run before the tests. On a
-      # slow day the job hit its limit having never run lint, build or test — a
-      # red build that said nothing about the code. A step that hits
-      # `timeout-minutes` cancels the whole job, which `continue-on-error` does
-      # not prevent, so the bound is a plain `timeout` instead.
-      - name: Audit what ships
-        if: always()
-        run: |
-          set +e
-          timeout 180 npm audit --omit=dev --audit-level=high
-          code=$?
-          set -e
-          if [ $code -eq 124 ]; then
-            echo "::warning::npm audit did not finish in 180s; not treating that as a vulnerability"
-          elif [ $code -ne 0 ]; then
-            exit $code
-          fi
-
-      - name: Audit the toolchain (advisory only)
-        if: always()
-        run: |
-          timeout 180 npm audit --audit-level=moderate > audit.txt 2>&1 \
-            || echo '(the registry did not answer in time)' >> audit.txt
-          {
-            echo '### Dev dependency advisories'
-            echo
-            echo 'Not blocking: these are build and test tools, not shipped code.'
-            echo
-            echo '```'
-            tail -20 audit.txt
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -214,3 +183,58 @@ jobs:
             exit 0
           fi
           node scripts/smoke.mjs "$DEPLOY_URL" "${{ github.sha }}"
+
+  # Dependencies, checked apart from the code.
+  #
+  # These used to run inside the test job, where they cost 360 of its 485
+  # seconds — both hitting their ceiling while the registry thought about it —
+  # to answer a question no pull request had changed the answer to. They now
+  # run on main and once a week, so a real advisory still stops a release
+  # without taxing every review.
+  audit:
+    name: dependencies
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      # Only what actually ships can fail this. The dev toolchain carries
+      # advisories of its own — a bug in the test runner is not a bug in the
+      # game — and those are reported below without blocking.
+      #
+      # Bounded in the shell rather than by `timeout-minutes`, because a step
+      # that hits a step timeout cancels the whole job and `continue-on-error`
+      # does not save it. A real advisory fails; a registry that will not
+      # answer only warns.
+      - name: Audit what ships
+        run: |
+          set +e
+          timeout 240 npm audit --omit=dev --audit-level=high
+          code=$?
+          set -e
+          if [ $code -eq 124 ]; then
+            echo "::warning::npm audit did not finish in 240s; not treating that as a vulnerability"
+          elif [ $code -ne 0 ]; then
+            exit $code
+          fi
+
+      - name: Audit the toolchain (advisory only)
+        if: always()
+        run: |
+          timeout 240 npm audit --audit-level=moderate > audit.txt 2>&1 \
+            || echo '(the registry did not answer in time)' >> audit.txt
+          {
+            echo '### Dev dependency advisories'
+            echo
+            echo 'Not blocking: these are build and test tools, not shipped code.'
+            echo
+            echo '```'
+            tail -20 audit.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -58,7 +58,7 @@ test.describe('a game of Judgement', () => {
     await seatAndStart(browser, 3);
     // Three at the table, and nobody in a team.
     for (const player of players) {
-      await expect(player.page.locator('.jseat')).toHaveCount(2); // the other two
+      await expect(player.page.locator('.jtable .jseat')).toHaveCount(2); // the other two
     }
   });
 
@@ -95,7 +95,7 @@ test.describe('a game of Judgement', () => {
     const asked = [];
     for (const player of players) {
       const text = (await player.page.locator('.turnbar').textContent()) ?? '';
-      if (text.startsWith('Your judgement')) asked.push(player);
+      if (text.startsWith('Look at your hand')) asked.push(player);
     }
     expect(asked).toHaveLength(1);
   });
@@ -115,6 +115,58 @@ test.describe('a game of Judgement', () => {
     await expect(last.page.locator('.bidChoice', { hasText: /^0$/ })).toBeEnabled();
   });
 
+  test('shows you your cards before asking you to judge', async ({ browser }) => {
+    await seatAndStart(browser, 3);
+    const bidder = await onTurnToBid(players);
+
+    // The bar is on screen and so is the hand. It used to be a modal over the
+    // top, so the first player judged before seeing a single card.
+    await expect(bidder.page.locator('.bidbar')).toBeVisible();
+    const cards = bidder.page.locator('.hand__cards [data-card-id]');
+    await expect(cards).toHaveCount(1);
+    await expect(cards.first()).toBeVisible();
+
+    // And the card is not hidden behind the bar.
+    const card = await cards.first().boundingBox();
+    const bar = await bidder.page.locator('.bidbar').boundingBox();
+    expect(card).not.toBeNull();
+    expect(bar).not.toBeNull();
+    expect(card!.y + card!.height).toBeLessThanOrEqual(bar!.y + 2);
+  });
+
+  test('seats everyone round the table, with the viewer at the bottom', async ({ browser }) => {
+    await seatAndStart(browser, 4);
+    const me = players[0]!;
+    const seats = me.page.locator('.jtable .jseat');
+    await expect(seats).toHaveCount(3);
+
+    // Three opponents at three different places, none of them on top of
+    // another — that is what "round the table" has to mean.
+    const boxes = [];
+    for (let i = 0; i < 3; i++) boxes.push(await seats.nth(i).boundingBox());
+    const centres = boxes.map((b) => `${Math.round(b!.x / 20)},${Math.round(b!.y / 20)}`);
+    expect(new Set(centres).size).toBe(3);
+  });
+
+  test('keeps a score board that says what was judged against what was taken', async ({ browser }) => {
+    await seatAndStart(browser, 3);
+    const me = players[0]!;
+
+    await me.page.getByRole('button', { name: 'Score board' }).click();
+    const board = me.page.getByRole('dialog', { name: 'Score board' });
+    await expect(board).toBeVisible();
+
+    // A column per player, and the running totals, from the very first round.
+    for (const player of players) {
+      await expect(board.getByRole('columnheader', { name: player.name })).toBeVisible();
+    }
+    await expect(board.getByText('Total')).toBeVisible();
+    await expect(board.getByText('No rounds finished yet.')).toBeVisible();
+
+    await board.getByRole('button', { name: 'Close' }).click();
+    await expect(board).toBeHidden();
+  });
+
   test('plays a card into the trick, and the table sees it', async ({ browser }) => {
     await seatAndStart(browser, 3);
     for (let i = 0; i < 3; i++) {
@@ -127,7 +179,7 @@ test.describe('a game of Judgement', () => {
     await leader.page.getByRole('button', { name: 'Play card' }).click();
 
     for (const player of players) {
-      await expect(player.page.locator('.trick__play')).toHaveCount(1);
+      await expect(player.page.locator('.jplay')).toHaveCount(1);
     }
   });
 });
@@ -143,7 +195,7 @@ test.describe('a game of Judgement', () => {
 async function judgeAs(players: Player[], pick: (page: Player) => Promise<void>): Promise<Player> {
   const bidder = await onTurnToBid(players);
   await pick(bidder);
-  await expect(bidder.page.locator('.turnbar')).not.toContainText('Your judgement');
+  await expect(bidder.page.locator('.turnbar')).not.toContainText('Look at your hand');
   return bidder;
 }
 
@@ -152,8 +204,8 @@ async function onTurnToBid(players: Player[]): Promise<Player> {
   for (let attempt = 0; attempt < 60; attempt++) {
     for (const player of players) {
       const text = (await player.page.locator('.turnbar').textContent()) ?? '';
-      if (text.startsWith('Your judgement')) {
-        await player.page.getByRole('dialog', { name: 'Your judgement' }).waitFor();
+      if (text.startsWith('Look at your hand')) {
+        await player.page.locator('.bidbar').waitFor();
         return player;
       }
     }

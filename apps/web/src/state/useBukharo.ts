@@ -95,8 +95,12 @@ export function useBukharo(): Bukharo {
       }
       if (error.code === 'SESSION_INVALID') {
         // This comes from the automatic resume on connect, not from anything
-        // the player did — drop the stale token quietly.
+        // the player did. Dropping the token quietly left people staring at
+        // the home screen mid-game with no idea why — this deployment keeps
+        // rooms on a filesystem that a new release replaces, so the honest
+        // answer is that the game is gone and why.
         clearSessionToken();
+        pushToast('That game could not be restored — the server was updated. Start or join a new room.');
         return;
       }
       pushToast(error.message);

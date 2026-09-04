@@ -13,6 +13,11 @@ services:
     # Rooms live in this process's memory, so a second instance would not be
     # able to see the first one's games. Keep this at one.
     numInstances: 1
+    # No persistent disk: this plan does not offer one, so every deploy hands
+    # the service a fresh filesystem and any game in progress is lost. The
+    # client says so plainly rather than dropping people to a bare error, and
+    # /health reports how many rooms are live so a deploy can be held back
+    # while people are still playing.
     envVars:
       - key: NODE_VERSION
         value: "22"

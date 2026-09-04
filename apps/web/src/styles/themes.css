@@ -82,9 +82,18 @@
   --good: #6fd39b;
   --warn: #ffb066;
 
-  /* Card faces: constant across themes. */
-  --card-face: #ffffff;
-  --card-face-edge: #eceadf;
-  --card-red: #d0021b;
-  --card-black: #16202b;
+  /*
+   * Card faces: constant across themes, and the same in all three games.
+   *
+   * Printed stock rather than screen white — a warm cream, a vermilion that
+   * reads as ink rather than as an error colour, and a near-black with a
+   * green cast, the way a real deck is inked.
+   */
+  --card-face: #f6f2e4;
+  --card-face-edge: #ddd6c0;
+  --card-red: #c8402c;
+  --card-black: #27332c;
+  /* The lattice printed across the face, and the hairline framing the pips. */
+  --card-lattice: rgba(39, 51, 44, 0.07);
+  --card-frame: rgba(39, 51, 44, 0.16);
 }

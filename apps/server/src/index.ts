@@ -48,11 +48,17 @@ async function serveStatic(req: http.IncomingMessage, res: http.ServerResponse):
     // The commit is reported so a deploy check can tell *this* build being
     // live apart from the previous one still serving while Render swaps over.
     // Render sets RENDER_GIT_COMMIT itself; elsewhere it is simply unknown.
+    // Rooms and players are reported so a deploy can be held back while people
+    // are still playing: this plan has no persistent disk, so deploying ends
+    // every game in progress.
+    const live = manager.liveActivity();
     res.end(
       JSON.stringify({
         ok: true,
         uptime: process.uptime(),
         commit: process.env.RENDER_GIT_COMMIT ?? process.env.GIT_COMMIT ?? 'unknown',
+        activeRooms: live.rooms,
+        playersConnected: live.players,
       }),
     );
     return;

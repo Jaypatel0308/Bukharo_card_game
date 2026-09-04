@@ -52,16 +52,28 @@ jobs:
       # so the job hit its limit having never once run lint, build or test —
       # a red build that said nothing about the code. Verification first;
       # anything network-bound afterwards, on a leash.
+      #
+      # Bounded in the shell rather than by `timeout-minutes`, because a step
+      # that hits a step timeout cancels the whole job — `continue-on-error`
+      # does not save it. A real advisory still fails the build; a registry
+      # that will not answer only warns.
       - name: Audit what ships
-        timeout-minutes: 4
-        run: npm audit --omit=dev --audit-level=high
+        run: |
+          set +e
+          timeout 180 npm audit --omit=dev --audit-level=high
+          code=$?
+          set -e
+          if [ $code -eq 124 ]; then
+            echo "::warning::npm audit did not finish in 180s; not treating that as a vulnerability"
+          elif [ $code -ne 0 ]; then
+            exit $code
+          fi
 
       - name: Audit the toolchain (advisory only)
         if: always()
-        timeout-minutes: 4
-        continue-on-error: true
         run: |
-          npm audit --audit-level=moderate > audit.txt 2>&1 || true
+          timeout 180 npm audit --audit-level=moderate > audit.txt 2>&1 \
+            || echo '(the registry did not answer in time)' >> audit.txt
           {
             echo '### Dev dependency advisories'
             echo

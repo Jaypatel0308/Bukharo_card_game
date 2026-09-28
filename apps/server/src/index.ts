@@ -467,21 +467,35 @@ const heartbeat = setInterval(() => {
  * host is the player who vanished. This runs regardless of who is missing.
  */
 const absentWatch = setInterval(() => {
-  void manager.playForAbsentPlayers().then((moved) => {
-    for (const roomId of moved) broadcastRoom(roomId);
-  });
+  void manager
+    .playForAbsentPlayers()
+    .then((moved) => {
+      for (const roomId of moved) broadcastRoom(roomId);
+    })
+    // A write that fails here used to reject into nothing, and Node ends the
+    // process on an unhandled rejection. One full disk would have taken every
+    // game on the server down with it; this deployment has no disk to restore
+    // them from, so they would simply be gone.
+    .catch((error: unknown) => {
+      console.error('[bukharo] absent-player sweep failed', error);
+    });
 }, config.absentCheckIntervalMs);
 
 const sweeper = setInterval(() => {
-  void manager.sweep().then((removed) => {
-    for (const roomId of removed) {
-      for (const connection of connectionsInRoom(roomId)) {
-        send(connection.ws, { type: 'left' });
-        connection.roomId = null;
-        connection.playerId = null;
+  void manager
+    .sweep()
+    .then((removed) => {
+      for (const roomId of removed) {
+        for (const connection of connectionsInRoom(roomId)) {
+          send(connection.ws, { type: 'left' });
+          connection.roomId = null;
+          connection.playerId = null;
+        }
       }
-    }
-  });
+    })
+    .catch((error: unknown) => {
+      console.error('[bukharo] room sweep failed', error);
+    });
 }, config.sweepIntervalMs);
 
 server.listen(config.port, config.host, () => {
@@ -501,6 +515,27 @@ function shutdown(): void {
   server.close(() => process.exit(0));
   setTimeout(() => process.exit(0), 3000).unref();
 }
+
+/*
+ * Staying up is worth more than failing fast here.
+ *
+ * The usual advice is to let a process die on an unexpected error and be
+ * restarted clean. That assumes the state can be recovered, and on this
+ * deployment it cannot: there is no persistent disk, so a restart ends every
+ * match in progress and drops everyone to a dead session. A single bad action
+ * in one room should not do that to four other tables.
+ *
+ * So: log loudly and keep serving. The room a fault came from may be left
+ * wrong, and that is the price; every other room carries on. Anything truly
+ * unrecoverable still surfaces, in the log, rather than as silence.
+ */
+process.on('unhandledRejection', (reason) => {
+  console.error('[bukharo] unhandled rejection — staying up', reason);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('[bukharo] uncaught exception — staying up', error);
+});
 
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);

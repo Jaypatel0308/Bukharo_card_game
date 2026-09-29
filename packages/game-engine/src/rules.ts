@@ -87,7 +87,10 @@ export interface RuleConfig {
    * pile is never truly empty — whoever takes it must put one card back — so
    * without a limit a round in which nobody can go out runs forever. Play
    * continues for this many further laps of the table, then the round is scored
-   * where it stands. UNCONFIRMED (§84): confirm the family's real rule.
+   * where it stands.
+   *
+   * Confirmed with the family: two laps is how they play it. It began as an
+   * invention to stop bots playing forever, and turned out to be right.
    */
   lapsAfterStockExhausted: number;
   /** The revealed wild card is set aside as an indicator rather than discarded. */

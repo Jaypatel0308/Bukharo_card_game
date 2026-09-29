@@ -1,8 +1,17 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
+import { applyAction } from '../src/engine.js';
 import { DEFAULT_RULES } from '../src/rules.js';
-import { newGame } from './helpers.js';
+import type { GameAction, GameState } from '../src/types.js';
+import { card, newGame, rules, scenario } from './helpers.js';
+
+/** Applies an action that is expected to be legal, or says why it was not. */
+function orThrow(state: GameState, action: GameAction): GameState {
+  const result = applyAction(state, action, rules());
+  if (!result.ok) throw new Error(`${action.type} refused: ${result.code} — ${result.message}`);
+  return result.state;
+}
 
 /**
  * The house rules that were open questions in §99 and have since been settled.
@@ -90,5 +99,65 @@ describe('a Joker turned up as the wild reveal (§99.2)', () => {
 describe('runs do not wrap around (§99.9)', () => {
   it('is off by default — K-A-2 is not a run', () => {
     assert.equal(DEFAULT_RULES.runsWrapAround, false);
+  });
+});
+
+describe('a hand is emptied by discarding, never by melding (§27)', () => {
+  const runOfFour = ['5', '6', '7', '8'].map((rank) =>
+    card(rank as Parameters<typeof card>[0], 'hearts').id,
+  );
+
+  /** p1 is opened, on turn, has drawn, and holds a clean run of four hearts. */
+  function readyToFinish(bucharooTaken: boolean): GameState {
+    const base = scenario(newGame(), {
+      currentPlayerId: 'p1',
+      turnPhase: 'PLAYING_CARDS',
+      hasDrawn: true,
+      wildRank: '2',
+      opened: { TEAM_A: true },
+      hands: {
+        p1: [card('5', 'hearts'), card('6', 'hearts'), card('7', 'hearts'), card('8', 'hearts')],
+      },
+    });
+    return { ...base, status: 'PLAYING', bucharooTaken };
+  }
+
+  function meldEverything(state: GameState) {
+    return applyAction(
+      state,
+      { type: 'CREATE_MELD', playerId: 'p1', meldType: 'RUN', cardIds: runOfFour },
+      rules(),
+    );
+  }
+
+  it('refuses a meld that would leave nothing to throw', () => {
+    const result = meldEverything(readyToFinish(true));
+    assert.equal(result.ok, false);
+    if (!result.ok) assert.equal(result.code, 'MUST_KEEP_DISCARD');
+  });
+
+  it('refuses it even when the Bucharoo is there for the taking', () => {
+    // This was the hole: melding to nothing collected the Bucharoo without a
+    // discard ever happening, which is a different game from the one played.
+    const result = meldEverything(readyToFinish(false));
+    assert.equal(result.ok, false, 'the Bucharoo is no excuse to skip the discard');
+    if (!result.ok) assert.equal(result.code, 'MUST_KEEP_DISCARD');
+  });
+
+  it('lets the hand end the proper way: meld the rest, then throw the last', () => {
+    const melded = orThrow(readyToFinish(true), {
+      type: 'CREATE_MELD',
+      playerId: 'p1',
+      meldType: 'RUN',
+      cardIds: runOfFour.slice(0, 3),
+    });
+    const out = orThrow(melded, {
+      type: 'DISCARD',
+      playerId: 'p1',
+      cardId: card('8', 'hearts').id,
+    });
+
+    assert.equal(out.teams.TEAM_A.wentOut, true, 'the discard is what goes out');
+    assert.equal(out.status, 'ROUND_END');
   });
 });

@@ -441,19 +441,41 @@ describe('Bucharoo (§25)', () => {
     assert.notEqual(discarded.state.currentPlayerId, 'p1');
   });
 
-  it('picks the Bucharoo up mid-turn when melding empties the hand', () => {
+  it('is not a way to avoid the discard', () => {
+    // This used to be allowed, and it let a player meld their whole hand away
+    // and collect the Bucharoo without ever throwing a card. Confirmed with
+    // the family: the hand is emptied by discarding, always.
     const game = newGame();
     const run = [card('4', 'spades'), card('5', 'spades'), card('6', 'spades'), card('7', 'spades')];
     const state = playing(game, 'p1', run, { wildRank: 'K' });
     const result = applyAction(state, { type: 'CREATE_MELD', playerId: 'p1', cardIds: ids(run) }, rules());
-    assert.equal(result.ok, true);
-    if (!result.ok) return;
-    const player = result.state.players.find((p) => p.id === 'p1')!;
-    assert.equal(player.hand.length, 13);
+    assert.equal(result.ok, false, 'melding the last card should be refused');
+    if (!result.ok) assert.equal(result.code, 'MUST_KEEP_DISCARD');
+  });
+
+  it('is picked up on the discard that empties the hand', () => {
+    const game = newGame();
+    const run = [card('4', 'spades'), card('5', 'spades'), card('6', 'spades'), card('7', 'spades')];
+    // One card over the run, so there is something left to throw.
+    const state = playing(game, 'p1', [...run, card('2', 'clubs')], { wildRank: 'K' });
+
+    const melded = applyAction(state, { type: 'CREATE_MELD', playerId: 'p1', cardIds: ids(run) }, rules());
+    assert.equal(melded.ok, true);
+    if (!melded.ok) return;
+
+    const discarded = applyAction(
+      melded.state,
+      { type: 'DISCARD', playerId: 'p1', cardId: card('2', 'clubs').id },
+      rules(),
+    );
+    assert.equal(discarded.ok, true);
+    if (!discarded.ok) return;
+
+    const player = discarded.state.players.find((p) => p.id === 'p1')!;
+    assert.equal(player.hand.length, 13, 'the Bucharoo arrives on the discard');
     assert.equal(player.handType, 'BUCHAROO');
-    assert.equal(result.state.turnPhase, 'PLAYING_CARDS');
-    const priv = result.events.find((e) => e.type === 'BUCHAROO_HAND');
-    assert.equal(priv?.privateToPlayerId, 'p1');
+    const priv = discarded.events.find((e) => e.type === 'BUCHAROO_HAND');
+    assert.equal(priv?.privateToPlayerId, 'p1', 'and only its owner sees it');
   });
 
   it('only lets one player take it', () => {

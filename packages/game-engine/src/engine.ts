@@ -620,21 +620,28 @@ function takeDiscardPile(state: GameState, playerId: string, rules: RuleConfig):
   };
 }
 
-/** Guards §27: a player may never meld away the card they need to discard. */
+/**
+ * Guards §27: a player may never meld away the card they need to discard.
+ *
+ * This holds for taking the Bucharoo as well as for going out. Confirmed with
+ * the family: the hand is emptied by *throwing* the last card, never by
+ * melding it, and the Bucharoo is collected on that discard. There used to be
+ * an exception here that let a player meld to nothing and pick the Bucharoo up
+ * without ever discarding, which is a different game.
+ */
 function guardMeldWouldStrandPlayer(
   state: GameState,
   player: GamePlayer,
   cardsUsed: number,
-  rules: RuleConfig,
+  _rules: RuleConfig,
 ): EngineError | null {
   const remaining = player.hand.length - cardsUsed;
   if (remaining > 0) return null;
 
-  const bucharooAvailable =
-    player.handType === 'ORIGINAL' && !state.bucharooTaken && state.bucharoo.length > 0;
-  if (bucharooAvailable && rules.bucharooPickupTiming === 'IMMEDIATE') return null;
-
-  return fail('MUST_KEEP_DISCARD', 'You must keep one card to discard in order to go out.');
+  return fail(
+    'MUST_KEEP_DISCARD',
+    'You must keep one card to discard — a hand is emptied by discarding, not by melding.',
+  );
 }
 
 function applyBucharoStatus(meld: Meld, rules: RuleConfig): void {

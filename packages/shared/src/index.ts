@@ -175,6 +175,15 @@ export type ServerMessage =
   | { type: 'game:event'; event: { type: string; payload: Record<string, unknown> } }
   | { type: 'error'; error: ServerError }
   | { type: 'left' }
+  /**
+   * The server is going down, usually for a deploy.
+   *
+   * Sent before the socket closes so players are told what happened instead of
+   * watching a reconnect spinner and then meeting a session error. This
+   * deployment cannot save a match across a restart, so `gameLost` says
+   * plainly whether there was one to lose.
+   */
+  | { type: 'server:closing'; gameLost: boolean }
   | { type: 'pong' };
 
 export const TARGET_SCORE_OPTIONS = [1000, 1500, 2000, 3000] as const;

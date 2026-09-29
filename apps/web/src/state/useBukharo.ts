@@ -132,6 +132,17 @@ export function useBukharo(): Bukharo {
             setRoom(null);
             window.history.replaceState(null, '', '/');
             break;
+          case 'server:closing':
+            // Said before the socket goes, so the reconnect spinner is
+            // explained rather than mysterious. A game in progress cannot come
+            // back, so the token is dropped now instead of failing later.
+            if (message.gameLost) {
+              clearSessionToken();
+              pushToast('The server is updating. This game cannot be saved — you will need a new room.');
+            } else {
+              pushToast('The server is updating. It should be back in a moment.');
+            }
+            break;
           default:
             break;
         }
@@ -140,7 +151,8 @@ export function useBukharo(): Bukharo {
     connectionRef.current = connection;
     connection.connect();
     return () => connection.close();
-  }, [handleError]);
+    // pushToast is a stable callback, so this still opens one socket per mount.
+  }, [handleError, pushToast]);
 
   // A gentle nudge when the turn comes round (§71). Both games report a
   // current player, so this needs no idea which is being played.

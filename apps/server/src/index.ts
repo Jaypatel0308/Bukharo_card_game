@@ -507,13 +507,46 @@ server.listen(config.port, config.host, () => {
   console.log(`[bukharo] game state directory: ${config.dataDir}`);
 });
 
+/**
+ * Tell everyone before going quiet.
+ *
+ * A deploy replaces this process, and with no persistent disk the match cannot
+ * come back. Closing the sockets without a word leaves players watching a
+ * reconnect spinner and then meeting a session error, with no idea the server
+ * was simply updated. One message costs nothing and explains it.
+ */
+function announceClosing(): void {
+  for (const connection of connections.values()) {
+    const room = connection.roomId ? manager.roomById(connection.roomId) : undefined;
+    const gameLost = room?.status === 'PLAYING' || room?.status === 'ROUND_END';
+    try {
+      send(connection.ws, { type: 'server:closing', gameLost: Boolean(gameLost) });
+    } catch {
+      // A socket already gone is not worth reporting during a shutdown.
+    }
+  }
+}
+
+let shuttingDown = false;
+
 function shutdown(): void {
+  // SIGTERM then SIGINT arriving together should not run this twice.
+  if (shuttingDown) return;
+  shuttingDown = true;
+
   clearInterval(heartbeat);
   clearInterval(absentWatch);
   clearInterval(sweeper);
-  wss.close();
-  server.close(() => process.exit(0));
-  setTimeout(() => process.exit(0), 3000).unref();
+
+  announceClosing();
+
+  // A moment for that message to leave, then go. Render allows longer than
+  // this before it stops waiting.
+  setTimeout(() => {
+    wss.close();
+    server.close(() => process.exit(0));
+    setTimeout(() => process.exit(0), 3000).unref();
+  }, 250).unref();
 }
 
 /*

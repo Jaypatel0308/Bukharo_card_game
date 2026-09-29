@@ -586,6 +586,11 @@ export class RoomManager {
    * Reported by /health so a deploy can be held back while a game is running:
    * this deployment has no persistent disk, so deploying ends every match.
    */
+  /** One room by id, for callers that already know which they want. */
+  roomById(roomId: string): Room | undefined {
+    return this.rooms.get(roomId);
+  }
+
   liveActivity(): { rooms: number; players: number } {
     let rooms = 0;
     let players = 0;

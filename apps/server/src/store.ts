@@ -127,10 +127,13 @@ export class FileStore implements Store {
     const roomId = room.id;
     const previous = this.inFlight.get(roomId) ?? Promise.resolve();
     const next = previous.then(() => this.writeNow(roomId, snapshot));
-    this.inFlight.set(
-      roomId,
-      next.catch(() => undefined),
-    );
+    const settled = next.catch(() => undefined);
+    this.inFlight.set(roomId, settled);
+    // Drop the entry once nothing is queued behind it, or the map keeps one
+    // promise per room the server has ever held, for as long as it runs.
+    void settled.then(() => {
+      if (this.inFlight.get(roomId) === settled) this.inFlight.delete(roomId);
+    });
     return next;
   }
 
@@ -149,6 +152,7 @@ export class FileStore implements Store {
   }
 
   async delete(roomId: string): Promise<void> {
+    this.inFlight.delete(roomId);
     await fs.rm(this.fileFor(roomId), { force: true });
   }
 }

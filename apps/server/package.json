@@ -17,11 +17,11 @@
     "@bukharo/game-judgement": "*",
     "@bukharo/game-mindi": "*",
     "@bukharo/shared": "*",
-    "ws": "^8.18.0"
+    "ws": "^8.22.0"
   },
   "devDependencies": {
-    "@types/node": "^22.9.0",
-    "@types/ws": "^8.5.13",
+    "@types/node": "^22.20.5",
+    "@types/ws": "^8.18.2",
     "typescript": "^5.6.3"
   }
 }
